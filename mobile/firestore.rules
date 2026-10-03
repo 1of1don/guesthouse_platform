@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Anyone can browse. Only admins edit listings. Customers may only change the
+    // rating totals (done by the app when they rate).
+    match /guesthouses/{id} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (signedIn() &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['ratingSum', 'ratingCount', 'averageRating']));
+    }
+
+    // One review per customer per guesthouse, written only by its owner.
+    match /ratings/{ratingId} {
+      allow read: if true;
+      allow create, update: if signedIn()
+        && request.resource.data.customerId == request.auth.uid
+        && ratingId == request.resource.data.guesthouseId + '_' + request.auth.uid
+        && request.resource.data.score is int
+        && request.resource.data.score >= 1 && request.resource.data.score <= 5;
+      allow delete: if isAdmin();
+    }
+
+    match /customers/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+      match /favourites/{guesthouseId} {
+        allow read, write: if signedIn() && request.auth.uid == uid;
+      }
+    }
+
+    // The first admin is added by hand in the Firebase console.
+    match /admins/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow write: if isAdmin();
+    }
+  }
+}
