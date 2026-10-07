@@ -21,6 +21,7 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
+        <img className="sidebar-logo" src="/micasa.png" alt="MiCasa SuCasa logo" />
         <h1 className="sidebar-title">Admin Portal</h1>
       </div>
 
