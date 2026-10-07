@@ -12,6 +12,13 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.sidebar-logo {
+  display: block;
+  width: 60px;
+  height: auto;
+  margin-bottom: 6px;
+}
+
 .sidebar-title {
   font-size: 19px;
   font-weight: 700;
