@@ -1,24 +1,25 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { api } from '../services/api';
+import { useAuth } from '../context/useAuth';
 import './Login.css';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const { login } = useAuth();
+  const [submitError, setSubmitError] = useState('');
+  const { login, error: authError } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError('');
     try {
-      const { token } = await api.login(email, password);
-      login(token);
+      await login(email, password);
       navigate('/dashboard');
-    } catch {
-      setError('Invalid email or password');
+    } catch (cause) {
+      setSubmitError(
+        cause instanceof Error ? cause.message : 'Unable to sign in.',
+      );
     }
   };
 
@@ -28,7 +29,11 @@ export default function Login() {
         <h1 className="auth-title">Login</h1>
         <p className="auth-subtitle">Welcome back to the admin portal</p>
 
-        {error && <div className="auth-error">{error}</div>}
+        {(submitError || authError) && (
+          <div className="auth-error" role="alert">
+            {submitError || authError}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
@@ -59,7 +64,7 @@ export default function Login() {
         </form>
 
         <p className="auth-footer">
-          Need an account? <Link to="/signup">Sign up</Link>
+          Need an admin account? <Link to="/signup">Register</Link>
         </p>
       </div>
     </div>

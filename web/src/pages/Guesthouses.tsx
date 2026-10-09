@@ -6,9 +6,18 @@ import './Dashboard.css';
 
 export default function Guesthouses() {
   const [items, setItems] = useState<Guesthouse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    api.getGuesthouses().then(setItems);
+    api.getGuesthouses()
+      .then(setItems)
+      .catch((cause: unknown) => {
+        setError(
+          cause instanceof Error ? cause.message : 'Unable to load guesthouses.',
+        );
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   return (
@@ -20,7 +29,8 @@ export default function Guesthouses() {
         </Link>
       </div>
 
-      <div className="table-wrapper">
+      {error && <p role="alert">{error}</p>}
+      {loading ? <p>Loading guesthouses...</p> : <div className="table-wrapper">
         <table className="table">
           <thead>
             <tr>
@@ -48,9 +58,12 @@ export default function Guesthouses() {
                 </td>
               </tr>
             ))}
+            {!items.length && (
+              <tr><td colSpan={5}>No guesthouses have been added yet.</td></tr>
+            )}
           </tbody>
         </table>
-      </div>
+      </div>}
     </div>
   );
 }

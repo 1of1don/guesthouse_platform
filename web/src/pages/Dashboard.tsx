@@ -7,15 +7,22 @@ import './Dashboard.css';
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    api.getDashboardStats().then((data) => {
-      setStats(data);
-      setLoading(false);
-    });
+    api.getDashboardStats()
+      .then(setStats)
+      .catch((cause: unknown) => {
+        setError(
+          cause instanceof Error ? cause.message : 'Unable to load dashboard.',
+        );
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  if (loading || !stats) return <p>Loading...</p>;
+  if (loading) return <p>Loading dashboard...</p>;
+  if (error) return <p role="alert">{error}</p>;
+  if (!stats) return <p role="alert">Dashboard data is unavailable.</p>;
 
   return (
     <div>
