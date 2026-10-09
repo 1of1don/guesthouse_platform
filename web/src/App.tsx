@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
+import { useAuth } from './context/useAuth';
 import Layout from './components/layout/Layout';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -9,8 +10,10 @@ import AddEditGuesthouse from './pages/AddEditGuesthouse';
 import AdminUsers from './pages/AdminUsers';
 
 function ProtectedRoute({ children }: { children: React.ReactElement }) {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? children : <Navigate to="/login" />;
+  const { isAuthenticated, status, error } = useAuth();
+  if (status === 'loading') return <p>Checking admin access...</p>;
+  if (status === 'error') return <p role="alert">{error}</p>;
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
 }
 
 export default function App() {
