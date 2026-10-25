@@ -14,7 +14,6 @@ export interface AuthContextType {
   user: AuthUser | null;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
-  loginAsDemoAdmin: (role?: AdminRole) => Promise<void>;
   logout: () => Promise<void>;
   clearError: () => void;
 }

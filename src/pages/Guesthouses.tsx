@@ -30,6 +30,7 @@ export default function Guesthouses() {
   const [sortBy, setSortBy] = useState<'price-asc' | 'price-desc' | 'rating' | 'newest'>('newest');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [previewProperty, setPreviewProperty] = useState<Guesthouse | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const loadData = () => {
     setLoading(true);
@@ -51,12 +52,16 @@ export default function Guesthouses() {
   }, []);
 
   const handleDelete = async (id: string, name: string) => {
+    if (deletingId) return;
     if (confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
       try {
+        setDeletingId(id);
         await api.deleteGuesthouse(id);
         setItems((prev) => prev.filter((item) => item._id !== id));
       } catch (cause) {
         alert(cause instanceof Error ? cause.message : 'Unable to delete guesthouse.');
+      } finally {
+        setDeletingId(null);
       }
     }
   };
@@ -385,10 +390,13 @@ export default function Guesthouses() {
                         </Link>
                         <button
                           onClick={() => g._id && handleDelete(g._id, g.name)}
-                          className="p-1.5 text-[#8F7F70] hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors cursor-pointer"
-                          title="Delete Property"
+                          disabled={!g._id || deletingId !== null}
+                          className="p-1.5 text-[#8F7F70] hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait"
+                          title={deletingId === g._id ? 'Deleting property...' : 'Delete Property'}
                         >
-                          <Trash2 className="w-4 h-4" />
+                          {deletingId === g._id
+                            ? <span className="text-[10px]">Deleting...</span>
+                            : <Trash2 className="w-4 h-4" />}
                         </button>
                       </td>
                     </tr>

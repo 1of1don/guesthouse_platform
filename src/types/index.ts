@@ -21,8 +21,8 @@ export interface Guesthouse {
   };
   pricePerNight: number;      // Price per night in BWP (Pula) or chosen currency
   rating?: number;            // Optional average rating (synced when mobile users rate)
-  logo?: string;              // Main photo or logo image URL
-  gallery?: string[];         // Extra photo URLs showing rooms and gardens
+  logo?: string;              // Firebase Storage download URL for the main photo
+  gallery?: string[];         // Firebase Storage download URLs for gallery photos
   createdAt?: string;         // ISO date string of when this listing was created
 }
 

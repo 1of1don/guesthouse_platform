@@ -34,7 +34,24 @@ export default function FloatingChatWidget() {
   const [error, setError] = useState('');
   const [selectedModel, setSelectedModel] = useState('gemini-3.8-flash');
 
+  const widgetRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleOutsideClick = (event: PointerEvent) => {
+      if (
+        event.target instanceof Node &&
+        !widgetRef.current?.contains(event.target)
+      ) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', handleOutsideClick);
+    return () => document.removeEventListener('pointerdown', handleOutsideClick);
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -93,7 +110,7 @@ export default function FloatingChatWidget() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-40">
+    <div ref={widgetRef} className="fixed bottom-6 right-6 z-40">
       {/* Floating Trigger Button */}
       {!isOpen && (
         <button

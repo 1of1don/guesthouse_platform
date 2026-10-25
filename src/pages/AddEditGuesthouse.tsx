@@ -41,6 +41,51 @@ const POPULAR_AMENITIES = [
   'Workspace',
 ];
 
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const ACCEPTED_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
+
+const isAcceptedImage = (file: File) =>
+  ACCEPTED_IMAGE_TYPES.has(file.type) && file.size <= MAX_IMAGE_SIZE;
+
+async function prepareImageForUpload(file: File): Promise<File> {
+  const bitmap = await createImageBitmap(file);
+  try {
+    const maxDimension = 1600;
+    const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
+    const width = Math.round(bitmap.width * scale);
+    const height = Math.round(bitmap.height * scale);
+    if (scale === 1 && file.size <= 750 * 1024) return file;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Could not prepare the selected image for upload.');
+    context.drawImage(bitmap, 0, 0, width, height);
+
+    const compressed = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error('Could not compress the selected image.'));
+        },
+        'image/webp',
+        0.82,
+      );
+    });
+
+    if (compressed.size >= file.size && scale === 1) return file;
+    const name = file.name.replace(/\.[^.]+$/, '') || 'guesthouse-image';
+    const extension = compressed.type === 'image/webp' ? 'webp' : 'png';
+    return new File([compressed], `${name}.${extension}`, {
+      type: compressed.type,
+      lastModified: file.lastModified,
+    });
+  } finally {
+    bitmap.close();
+  }
+}
+
 const emptyGuesthouse: Guesthouse = {
   name: '',
   city: 'Gaborone',
@@ -64,8 +109,11 @@ export default function AddEditGuesthouse() {
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>('');
+  const [logoError, setLogoError] = useState('');
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
+  const [galleryError, setGalleryError] = useState('');
+  const [preparingImages, setPreparingImages] = useState(false);
 
   const [loading, setLoading] = useState(Boolean(id));
   const [saving, setSaving] = useState(false);
@@ -115,21 +163,53 @@ export default function AddEditGuesthouse() {
     }
   };
 
-  const handleLogoUpload = (file: File | null) => {
-    setLogoFile(file);
-    if (file) {
-      setLogoPreview(URL.createObjectURL(file));
+  const handleLogoUpload = async (file: File | null) => {
+    if (!file) return;
+    if (!isAcceptedImage(file)) {
+      setLogoError('Choose a PNG, JPG, or WEBP image no larger than 5MB.');
+      return;
+    }
+    setLogoError('');
+    setError('');
+    setPreparingImages(true);
+    try {
+      const preparedFile = await prepareImageForUpload(file);
+      setLogoFile(preparedFile);
+      setLogoPreview(URL.createObjectURL(preparedFile));
+    } catch (cause) {
+      setLogoError(cause instanceof Error ? cause.message : 'Unable to prepare the cover image.');
+    } finally {
+      setPreparingImages(false);
     }
   };
 
-  const handleGalleryUpload = (files: File[]) => {
-    setGalleryFiles(files);
-    const newPreviews = files.map((f) => URL.createObjectURL(f));
-    setGalleryPreviews((prev) => [...prev, ...newPreviews]);
+  const handleGalleryUpload = async (files: File[]) => {
+    if (!files.length) return;
+    const invalidFile = files.find((file) => !isAcceptedImage(file));
+    if (invalidFile) {
+      setGalleryError('Choose PNG, JPG, or WEBP images no larger than 5MB each.');
+      return;
+    }
+    setGalleryError('');
+    setError('');
+    setPreparingImages(true);
+    try {
+      const preparedFiles = await Promise.all(files.map(prepareImageForUpload));
+      setGalleryFiles((previous) => [...previous, ...preparedFiles]);
+      setGalleryPreviews((previous) => [
+        ...previous,
+        ...preparedFiles.map((file) => URL.createObjectURL(file)),
+      ]);
+    } catch (cause) {
+      setGalleryError(cause instanceof Error ? cause.message : 'Unable to prepare gallery images.');
+    } finally {
+      setPreparingImages(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (logoError || galleryError || preparingImages) return;
     setSaving(true);
     setError('');
 
@@ -206,9 +286,9 @@ export default function AddEditGuesthouse() {
         </p>
       </div>
 
-      {error && (
+      {(error || logoError || galleryError) && (
         <div className="p-4 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 rounded-2xl text-xs" role="alert">
-          {error}
+          {error || logoError || galleryError}
         </div>
       )}
 
@@ -362,17 +442,17 @@ export default function AddEditGuesthouse() {
             </div>
           </div>
 
-          {/* Section 3: Tariff & Contact Details */}
+          {/* Section 3: Price & Contact Details */}
           <div className="glass-panel rounded-3xl p-6 shadow-xs space-y-4">
             <h2 className="text-sm font-bold text-[#231A14] dark:text-[#F7F4EF] flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-[#9E7246] dark:text-[#D6A670]" />
-              <span>Tariff & Guest Contact</span>
+              <span>Price & Guest Contact</span>
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-[#524438] dark:text-[#D4BA9E] mb-1.5">
-                  Nightly Tariff ({currency.code}) *
+                  Price per Night ({currency.code}) *
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-2.5 text-xs font-bold text-[#8F7F70]">
@@ -485,12 +565,16 @@ export default function AddEditGuesthouse() {
                 <div className="space-y-1">
                   <input
                     type="file"
-                    accept="image/*"
-                    onChange={(e) => handleLogoUpload(e.target.files?.[0] || null)}
+                    accept="image/png,image/jpeg,image/webp"
+                    disabled={saving || preparingImages}
+                    onChange={(e) => {
+                      void handleLogoUpload(e.target.files?.[0] || null);
+                      e.currentTarget.value = '';
+                    }}
                     className="text-xs text-[#7A6C60] dark:text-[#A69788] file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#231A14] file:text-white dark:file:bg-[#EAE2D8] dark:file:text-[#181310] file:cursor-pointer"
                   />
                   <p className="text-[11px] text-[#8F7F70] dark:text-[#9E8E80]">
-                    PNG, JPG, or WEBP up to 5MB.
+                    Upload an image file (PNG, JPG, or WEBP), up to 5MB.
                   </p>
                 </div>
               </div>
@@ -499,13 +583,20 @@ export default function AddEditGuesthouse() {
             {/* Gallery Upload */}
             <div className="pt-2">
               <label className="block text-xs font-semibold text-[#524438] dark:text-[#D4BA9E] mb-1.5">
-                Room & Garden Gallery Photos
+                Room & Garden Photos
               </label>
+              <p className="text-[11px] text-[#8F7F70] dark:text-[#9E8E80] mb-2">
+                Upload PNG, JPG, or WEBP files up to 5MB each. Photos are sent to Firebase Storage when you save.
+              </p>
               <input
                 type="file"
                 multiple
-                accept="image/*"
-                onChange={(e) => handleGalleryUpload(Array.from(e.target.files || []))}
+                accept="image/png,image/jpeg,image/webp"
+                disabled={saving || preparingImages}
+                onChange={(e) => {
+                  void handleGalleryUpload(Array.from(e.target.files || []));
+                  e.currentTarget.value = '';
+                }}
                 className="text-xs text-[#7A6C60] dark:text-[#A69788] file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#231A14] file:text-white dark:file:bg-[#EAE2D8] dark:file:text-[#181310] file:cursor-pointer"
               />
 
@@ -517,6 +608,11 @@ export default function AddEditGuesthouse() {
                     </div>
                   ))}
                 </div>
+              )}
+              {preparingImages && (
+                <p className="mt-2 text-[11px] text-[#7A6C60] dark:text-[#A69788]" role="status">
+                  Optimizing photos for faster upload...
+                </p>
               )}
             </div>
           </div>
@@ -545,11 +641,11 @@ export default function AddEditGuesthouse() {
               </Link>
               <button
                 type="submit"
-                disabled={saving}
+                disabled={saving || preparingImages}
                 className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#231A14] hover:bg-[#372A22] dark:bg-[#EAE2D8] dark:text-[#181310] dark:hover:bg-white text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-60"
               >
                 {saving ? (
-                  <span>Saving...</span>
+                  <span>{logoFile || galleryFiles.length ? 'Uploading photos & saving...' : 'Saving guesthouse...'}</span>
                 ) : (
                   <>
                     <Check className="w-4 h-4 text-[#D6A670] dark:text-[#9E7246]" />
@@ -605,7 +701,7 @@ export default function AddEditGuesthouse() {
                 <div className="pt-3 border-t border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between">
                   <div>
                     <span className="text-[10px] uppercase font-semibold text-[#8F7F70] block">
-                      Tariff
+                      Price
                     </span>
                     <span className="text-base font-bold font-mono tabular-nums text-[#231A14] dark:text-[#F7F4EF]">
                       {formatPrice(form.pricePerNight)}

@@ -68,7 +68,7 @@ interface SettingsContextType {
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
-// Helper function that peeks at the browser's timezone to suggest default currency
+// Helper function that peeks at the browser's timezone to suggest a local currency
 function detectLocationCurrency(): string {
   try {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
@@ -105,7 +105,7 @@ const STORAGE_KEY_CURRENCY = 'micasa_currency_setting';
 const STORAGE_KEY_THEME = 'micasa_theme_setting';
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  // Detected default currency from location
+  // Detected local currency is shown as a suggestion; BWP remains the initial default.
   const [detectedLocationCurrency] = useState<string>(() => detectLocationCurrency());
 
   // Active currency state, loaded from LocalStorage
@@ -114,7 +114,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     if (saved && SUPPORTED_CURRENCIES[saved]) {
       return saved;
     }
-    return detectLocationCurrency();
+    return 'BWP';
   });
 
   // Active theme state ('light', 'dark', or 'system')

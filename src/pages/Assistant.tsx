@@ -54,7 +54,7 @@ export default function Assistant() {
     {
       id: 'welcome-1',
       role: 'model',
-      text: "Hello! I am the MiCasa SuCasa Hospitality Assistant. I can help you explore Botswana guesthouse destinations, review amenities and tariffs, and navigate the admin portal.\n\nPlease note: To ensure platform security, direct database changes (such as creating or deleting guesthouses) and payment processing cannot be performed directly in chat. If you request something outside my scope, I will let you know and direct you to the appropriate portal page or administrator.",
+      text: "Hello! I am the MiCasa SuCasa Hospitality Assistant. I can help you explore Botswana guesthouse destinations, review amenities and prices, and navigate the admin portal.\n\nPlease note: To ensure platform security, direct database changes (such as creating or deleting guesthouses) and payment processing cannot be performed directly in chat. If you request something outside my scope, I will let you know and direct you to the appropriate portal page or administrator.",
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       modelUsed: 'gemini-3.8-flash',
     },
@@ -223,7 +223,7 @@ export default function Assistant() {
                 </p>
                 <ul className="text-[11px] space-y-0.5 text-emerald-900 dark:text-emerald-400">
                   <li>• Answering questions on Botswana destinations & lodges</li>
-                  <li>• Explaining amenities, tariffs, and currency options</li>
+                  <li>• Explaining amenities, prices, and currency options</li>
                   <li>• Guiding how to add/edit properties in the admin portal</li>
                   <li>• Sharing travel seasons and safari recommendations</li>
                 </ul>
@@ -367,7 +367,7 @@ export default function Assistant() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={`Ask the concierge (e.g. "What lodges are in Maun?" or test out-of-scope boundaries)...`}
+              placeholder='Ask the concierge (e.g. "What lodges are in Maun?")'
               disabled={loading}
               className="w-full px-4 py-2.5 text-xs bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.07] dark:border-white/[0.08] rounded-xl text-[#231A14] dark:text-[#F7F4EF] placeholder:text-[#9E8E80] focus:bg-white dark:focus:bg-[#251E1A] focus:outline-hidden focus:ring-1 focus:ring-[#9E7246] transition-all"
             />

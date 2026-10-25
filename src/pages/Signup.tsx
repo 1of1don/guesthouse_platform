@@ -1,22 +1,12 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   ShieldCheck,
   Building2,
   ArrowLeft,
   KeyRound,
-  Sparkles,
 } from 'lucide-react';
-import { useAuth } from '../context/useAuth';
 
 export default function Signup() {
-  const { loginAsDemoAdmin } = useAuth();
-  const navigate = useNavigate();
-
-  const handleDemo = async () => {
-    await loginAsDemoAdmin('Admin');
-    navigate('/dashboard');
-  };
-
   return (
     <div className="min-h-screen flex bg-[#F8F6F2] dark:bg-[#0E0C0A] text-[#231A14] dark:text-[#F7F4EF] antialiased">
       {/* Left Column: Visual Showcase */}
@@ -52,17 +42,11 @@ export default function Signup() {
         </div>
 
         <div className="relative z-10 max-w-lg space-y-4">
-          <h1 className="text-3xl sm:text-4xl font-bold text-[#FAF7F2] tracking-tight leading-tight">
-            Role-Based Access Control & Strict Security Protocols
-          </h1>
           <p className="text-sm text-[#C5B7A8] leading-relaxed">
-            To maintain data integrity and guest privacy across all Botswana properties, administrator accounts are restricted to verified operators and platform owners.
+            Administrator accounts are restricted to verified operators and platform owners.
           </p>
         </div>
 
-        <div className="relative z-10 text-xs text-[#8F7F70]">
-          MiCasa Security Standard · Enforced via Firebase Security Rules
-        </div>
       </div>
 
       {/* Right Column */}
@@ -111,19 +95,12 @@ export default function Signup() {
           </div>
 
           <div className="p-5 rounded-2xl glass-panel space-y-2.5">
-            <p className="text-xs font-semibold text-[#231A14] dark:text-[#F7F4EF] flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-[#9E7246] dark:text-[#D6A670]" />
-              <span>Project Evaluation Mode</span>
+            <p className="text-xs font-semibold text-[#231A14] dark:text-[#F7F4EF]">
+              Firebase sign-in setup
             </p>
             <p className="text-[11px] text-[#7A6C60] dark:text-[#A69788]">
-              For presentation and evaluation purposes, you can immediately access the portal as an invited administrator.
+              The project owner must create your account in Firebase Authentication and add an <code>admins</code> Firestore document whose ID is your Firebase user UID. Then sign in with that account.
             </p>
-            <button
-              onClick={handleDemo}
-              className="w-full py-2.5 px-3 text-xs font-bold text-white bg-[#231A14] hover:bg-[#372A22] dark:bg-[#EAE2D8] dark:text-[#181310] dark:hover:bg-white rounded-xl shadow-xs transition-colors cursor-pointer"
-            >
-              Sign In as Evaluator Admin
-            </button>
           </div>
         </div>
       </div>

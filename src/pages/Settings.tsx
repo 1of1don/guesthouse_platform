@@ -71,7 +71,7 @@ export default function Settings() {
             <div>
               <h2 className="text-sm font-bold text-[#231A14] dark:text-[#F7F4EF] flex items-center gap-2">
                 <Coins className="w-4 h-4 text-[#9E7246] dark:text-[#D6A670]" />
-                <span>Currency & Tariff Display</span>
+                <span>Currency & Price Display</span>
               </h2>
               <p className="text-xs text-[#7A6C60] dark:text-[#A69788] mt-1 leading-relaxed">
                 Select the base active currency. All rates and metrics are formatted strictly to 2 decimal places.

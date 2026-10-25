@@ -163,36 +163,26 @@ async function uploadImage(
   file: File,
 ): Promise<string> {
   if (!storage) {
-    // If Firebase storage isn't active, generate an in-memory browser URL
-    return URL.createObjectURL(file);
+    throw new Error('Firebase Storage is not configured. Configure Storage before uploading guesthouse photos.');
   }
-  try {
-    const imageRef = ref(
-      storage,
-      `guesthouses/${guesthouseId}/${category}/${crypto.randomUUID()}`,
-    );
-    const result = await uploadBytes(imageRef, file, {
-      contentType: file.type,
-    });
-    return await getDownloadURL(result.ref);
-  } catch (err) {
-    console.warn('Storage upload fallback:', err);
-    return URL.createObjectURL(file);
-  }
+  const imageRef = ref(
+    storage,
+    `guesthouses/${guesthouseId}/${category}/${crypto.randomUUID()}`,
+  );
+  const result = await uploadBytes(imageRef, file, {
+    contentType: file.type,
+  });
+  return getDownloadURL(result.ref);
 }
 
-// Deletes all uploaded images for a guesthouse when deleted
+// Deletes uploaded images after the guesthouse document has been removed.
 async function deleteStorageContents(directory: StorageReference) {
   if (!storage) return;
-  try {
-    const contents = await listAll(directory);
-    await Promise.all([
-      ...contents.items.map((item) => deleteObject(item)),
-      ...contents.prefixes.map((prefix) => deleteStorageContents(prefix)),
-    ]);
-  } catch (err) {
-    console.warn('Storage delete warning:', err);
-  }
+  const contents = await listAll(directory);
+  await Promise.all([
+    ...contents.items.map((item) => deleteObject(item)),
+    ...contents.prefixes.map((prefix) => deleteStorageContents(prefix)),
+  ]);
 }
 
 // Uploads both the logo and multiple gallery images
@@ -347,19 +337,19 @@ export const api = {
     const nowIso = new Date().toISOString();
 
     if (isFirebaseConfigured && db) {
-      try {
-        const guesthouseRef = doc(collection(db, 'guesthouses'));
-        const imageFields = await uploadImages(guesthouseRef.id, images);
-        await setDoc(guesthouseRef, {
-          ...guesthouseFields(data),
-          ...imageFields,
-          rating: 0,
-          createdAt: serverTimestamp(),
-        });
-        return guesthouseRef.id;
-      } catch (err) {
-        console.warn('Firestore create failed, saving locally:', err);
-      }
+      const guesthouseRef = doc(collection(db, 'guesthouses'));
+      const imageFields = await uploadImages(guesthouseRef.id, images);
+      await setDoc(guesthouseRef, {
+        ...guesthouseFields(data),
+        ...imageFields,
+        rating: 0,
+        createdAt: serverTimestamp(),
+      });
+      return guesthouseRef.id;
+    }
+
+    if (images.logo || images.gallery?.length) {
+      throw new Error('Guesthouse photos require a configured Firebase Storage connection.');
     }
 
     // LocalStorage fallback path
@@ -402,24 +392,27 @@ export const api = {
     images: GuesthouseImages = {},
   ): Promise<void> => {
     if (isFirebaseConfigured && db) {
-      try {
-        const existingDoc = await getDoc(doc(db, 'guesthouses', id));
-        if (existingDoc.exists()) {
-          const current = toGuesthouse(existingDoc.id, existingDoc.data());
-          const imageFields = await uploadImages(
-            id,
-            images,
-            current.gallery ?? [],
-          );
-          await updateDoc(doc(db, 'guesthouses', id), {
-            ...guesthouseFields(data),
-            ...imageFields,
-          });
-          return;
-        }
-      } catch (err) {
-        console.warn('Firestore update error, updating local:', err);
+      const guesthouseRef = doc(db, 'guesthouses', id);
+      const existingDoc = await getDoc(guesthouseRef);
+      if (!existingDoc.exists()) {
+        throw new Error(`Guesthouse "${id}" was not found in Firestore.`);
       }
+
+      const current = toGuesthouse(existingDoc.id, existingDoc.data());
+      const imageFields = await uploadImages(
+        id,
+        images,
+        current.gallery ?? [],
+      );
+      await updateDoc(guesthouseRef, {
+        ...guesthouseFields(data),
+        ...imageFields,
+      });
+      return;
+    }
+
+    if (images.logo || images.gallery?.length) {
+      throw new Error('Guesthouse photos require a configured Firebase Storage connection.');
     }
 
     // LocalStorage fallback
@@ -442,17 +435,16 @@ export const api = {
 
   // ----------------------------------------------------------------------------
   // 6. DELETE GUESTHOUSE
-  // Permanently deletes a guesthouse and cleans up its photos
+  // Deletes the guesthouse record immediately and cleans up photos afterward.
   // ----------------------------------------------------------------------------
   deleteGuesthouse: async (id: string): Promise<void> => {
     if (isFirebaseConfigured && db) {
-      try {
-        if (storage) {
-          await deleteStorageContents(ref(storage, `guesthouses/${id}`));
-        }
-        await deleteDoc(doc(db, 'guesthouses', id));
-      } catch (err) {
-        console.warn('Firestore delete error, removing locally:', err);
+      await deleteDoc(doc(db, 'guesthouses', id));
+
+      if (storage) {
+        void deleteStorageContents(ref(storage, `guesthouses/${id}`)).catch((err) => {
+          console.error(`Unable to delete photos for guesthouse "${id}":`, err);
+        });
       }
     }
 

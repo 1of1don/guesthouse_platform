@@ -94,7 +94,7 @@ export default function PropertyCard({ property, onPreview }: PropertyCardProps)
         <div className="mt-4 pt-3 border-t border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between">
           <div>
             <span className="text-[10px] uppercase font-semibold tracking-wider text-[#8F7F70] dark:text-[#7A6C60] block">
-              Tariff
+              Price
             </span>
             <div className="flex items-baseline gap-1">
               <span className="text-base font-bold font-mono tabular-nums text-[#231A14] dark:text-[#F7F4EF]">

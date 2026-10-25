@@ -138,7 +138,7 @@ export default function Dashboard() {
         />
 
         <StatCard
-          title="Average Nightly Tariff"
+          title="Average Nightly Price"
           value={formatPrice(stats.averagePrice)}
           subtitle={`Calculated in ${currency.code} (2 decimals)`}
           icon={SlidersHorizontal}
@@ -212,7 +212,7 @@ export default function Dashboard() {
                   <tr className="border-b border-black/[0.05] dark:border-white/[0.06] bg-black/[0.02] dark:bg-white/[0.02] text-[#8F7F70] dark:text-[#9E8E80] font-semibold uppercase tracking-wider text-[10px]">
                     <th className="py-3 px-4">Guesthouse</th>
                     <th className="py-3 px-4">Location</th>
-                    <th className="py-3 px-4 text-right">Tariff / Night ({currency.code})</th>
+                    <th className="py-3 px-4 text-right">Price / Night ({currency.code})</th>
                     <th className="py-3 px-4 text-center">Mobile Rating</th>
                     <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
@@ -332,7 +332,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Right (1/3): Location Breakdown & Regional Tariffs */}
+        {/* Right (1/3): Location Breakdown & Regional Prices */}
         <div className="space-y-6">
           {/* Average Price & Regional Distribution */}
           <div className="glass-panel rounded-2xl p-5 shadow-xs space-y-4">
@@ -394,7 +394,7 @@ export default function Dashboard() {
               </h4>
             </div>
             <p className="text-xs text-[#524438] dark:text-[#B5A596] leading-relaxed">
-              Register a new accommodation property with coordinates, photography, room amenities, and custom tariffs.
+              Register a new accommodation property with coordinates, photography, room amenities, and custom prices.
             </p>
             <Link
               to="/guesthouses/new"

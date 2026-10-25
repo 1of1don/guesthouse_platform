@@ -68,7 +68,7 @@ export default function PropertyDetailModal({
 
             <div className="text-right shrink-0">
               <span className="text-[10px] uppercase font-semibold tracking-wider text-[#8F7F70] dark:text-[#7A6C60] block">
-                Tariff
+                Price
               </span>
               <div className="flex items-baseline gap-1">
                 <span className="text-2xl font-bold font-mono tabular-nums text-[#231A14] dark:text-[#F7F4EF]">

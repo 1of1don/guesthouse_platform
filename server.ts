@@ -5,25 +5,31 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-dotenv.config();
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+dotenv.config({
+  path: [
+    path.join(__dirname, '.env.local'),
+    path.join(__dirname, '.env'),
+  ],
+});
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json());
 
-// Initialize server-side Gemini client with required User-Agent header
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
-    },
-  },
-});
+const ai = process.env.GEMINI_API_KEY
+  ? new GoogleGenAI({
+      apiKey: process.env.GEMINI_API_KEY,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        },
+      },
+    })
+  : null;
 
 // Multi-turn Chat API endpoint with strict role & scope guardrails
 app.post('/api/chat', async (req, res) => {
@@ -32,6 +38,11 @@ app.post('/api/chat', async (req, res) => {
 
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ error: 'Message content is required.' });
+    }
+    if (!ai) {
+      return res.status(503).json({
+        error: 'Chat is not configured. Set GEMINI_API_KEY in .env.local and restart the server.',
+      });
     }
 
     // Supported models per user prompt specifications:
@@ -45,7 +56,7 @@ app.post('/api/chat', async (req, res) => {
 
 YOUR ROLE & IN-SCOPE RESPONSIBILITIES:
 1. Provide accurate information and guidance about Botswana travel, destinations, and lodging (e.g. Gaborone, Maun, Kasane, Palapye, Francistown, Ghanzi, Okavango Delta, Chobe National Park).
-2. Answer questions about registered boutique guesthouses, amenities, room tariffs (in Botswana Pula BWP and supported currencies), and travel planning.
+2. Answer questions about registered boutique guesthouses, amenities, room prices (in Botswana Pula BWP and supported currencies), and travel planning.
 3. Assist administrators with understanding portal workflows (how to register a guesthouse via the Add Guesthouse page, how to configure currency settings, how admin team access works).
 4. Maintain a refined, welcoming, and professional hospitality tone.
 

@@ -9,10 +9,11 @@ This guide details the **current state of the backend** for the MiCasa SuCasa pl
 ### 1. Backend Overview
 The backend is centralized in `src/services/api.ts` with database connection setup in `src/firebase.ts`. 
 
-It uses a **Hybrid Resilience Architecture**:
-- When Firebase environment variables are provided, it connects to **Firebase Firestore** and **Firebase Storage**.
-- When running in local demonstration mode, it automatically persists all data to browser **LocalStorage** (`micasa_guesthouses_v7` and `micasa_admins_v4`).
-- **Benefit for beginner/intermediate developers**: The application will **never fail or crash** during a live showcase if internet or Firebase keys are temporarily unavailable.
+It uses Firebase Firestore and Firebase Storage when configured. Some data reads and writes can fall back to browser **LocalStorage** (`micasa_guesthouses_v7` and `micasa_admins_v4`) for local demonstrations. Actual photo uploads require Firebase Storage; if Storage is unavailable or rejects an upload, the form reports the error and does not save temporary browser URLs as uploaded photos.
+
+To connect a Firebase project locally, copy `.env.example` to `.env.local` and fill in the six `VITE_FIREBASE_*` values from Firebase Console > Project settings > General > Your apps. Enable Firestore, Email/Password in Authentication, and Storage in the Firebase console. Restart the dev server after changing environment values. Firebase client settings are included in the browser bundle; secure access with Firebase Security Rules and API key restrictions. Do not use a service-account key in this app.
+
+Firebase Authentication sign-in requires Email/Password Authentication to be enabled and an `admins/{uid}` Firestore document for each authorized account. Create the account in Firebase Authentication, then provision its admin document using that account's Firebase UID. The app verifies this document before granting access; missing documents or failed verification do not grant access. The former demo sign-in has been removed. Guesthouse data may still use the documented browser LocalStorage fallback if Firestore operations fail.
 
 ---
 
@@ -32,11 +33,13 @@ Stores the registered guesthouses across Botswana.
 | `amenities` | `array<string>` | List of amenities (e.g., `["Free Wi-Fi", "Swimming Pool"]`) |
 | `contactDetails` | `string` | Phone number and contact email for reservations |
 | `coordinates` | `map / object` | GPS pin: `{ lat: -24.6282, lng: 25.9231 }` |
-| `pricePerNight` | `number` | Nightly tariff in base currency (BWP) |
+| `pricePerNight` | `number` | Price per night in base currency (BWP; the initial currency selection) |
 | `rating` | `number (optional)` | Average guest rating (0 or undefined until mobile users rate) |
-| `logo` / `logoUrl` | `string` | URL of the primary cover photo |
-| `gallery` | `array<string>` | Array of room and garden photo URLs |
+| `logoUrl` | `string` | Firebase Storage download URL for the uploaded cover photo |
+| `galleryUrls` | `array<string>` | Firebase Storage download URLs for uploaded room and garden photos |
 | `createdAt` | `timestamp` | Date and time the listing was registered |
+
+On the Add/Edit Guesthouse form, select PNG, JPG, or WEBP image files (up to 5MB each). On save, the original files upload to Firebase Storage under `guesthouses/{guesthouseId}/`; their download URLs are stored in the Firestore guesthouse document. Firebase Storage rules must permit the signed-in admin to upload and read these files. Upload errors stop the save and are shown on the form rather than storing temporary browser-only image URLs.
 
 #### Collection: `admins`
 Stores authorized administrator accounts.
@@ -65,8 +68,8 @@ In strict accordance with the project requirements, there is currently **exactly
 ### 4. Guesthouse Catalog & Registration Data Source
 As requested, all mock guesthouses have been removed. The application starts with an **empty, pristine guesthouse catalog**:
 - **Source of Data**: Guesthouses are added dynamically when an administrator submits the registration form on the **Add Guesthouse** page (`/guesthouses/new`).
-- **Data Persistence**: When you register a guesthouse, it saves immediately to Firestore (if configured) and persists inside browser LocalStorage (`micasa_guesthouses_v7`).
-- **Immediate Reflection**: As soon as you add a guesthouse, it immediately appears in the Guesthouses directory, in the Dashboard recent listings table, and updates all KPI statistics (total count, city distribution, and average nightly tariff).
+- **Data Persistence**: When Firebase is configured, guesthouse records save to Firestore and image files upload to Firebase Storage. Read operations may use browser LocalStorage as a fallback.
+- **Immediate Reflection**: As soon as you add a guesthouse, it immediately appears in the Guesthouses directory, in the Dashboard recent listings table, and updates all KPI statistics (total count, city distribution, and average nightly price).
 
 ---
 
@@ -109,10 +112,10 @@ To power the intelligent assistant safely, we run a full-stack Express server in
 ## Part 2: General User Guide (How to Use the App)
 
 ### 1. How to Sign In
-1. Open the web application. You will be taken to the **Admin Sign-In** screen (`/login`).
-2. You have two ways to sign in:
-   - **Method A (1-Click Demo Access)**: Click the black **"Explore Dashboard as Admin"** button inside the beige demo box. This logs you in immediately as **Ontiretse Bagwasi**.
-   - **Method B (Credentials)**: Enter email `onty@micasa.com` and your password, then click **"Sign In to Admin Portal"**.
+1. In Firebase Console, create an account under **Authentication > Users** using Email/Password.
+2. Copy the new account's Firebase UID. In Firestore, create `admins/{uid}` with fields such as `name` (string) and `role` (`Owner` or `Admin`).
+3. Open the web application at `/login`, enter that Firebase account's email and password, and choose **Sign In to Admin Portal**.
+4. Only Firebase-authenticated users with a matching `admins/{uid}` document and valid role can access the admin portal. There is no demo or self-service signup flow.
 
 ---
 
@@ -122,7 +125,7 @@ Once signed in, you land on the **Dashboard** (`/dashboard`):
   - *Total Registered Guesthouses*: Current catalog size.
   - *Top Destination City*: City with the highest density of guesthouses (e.g. Gaborone).
   - *Highest Rated Guesthouse*: Highlights the top-scoring property once mobile ratings sync.
-  - *Added This Month & Average Tariff*: Displays average nightly rate across all properties formatted to 2 decimals.
+  - *Added This Month & Average Price*: Displays average nightly rate across all properties formatted to 2 decimals.
 - **Featured Listings Table**:
   - Filter listings by city by clicking the city buttons (`All Cities`, `Gaborone`, `Maun`, `Kasane`, etc.).
   - Click the **Eye Icon** to open the full property dossier modal.
@@ -153,7 +156,7 @@ Click **"Guesthouses"** in the left sidebar to open the catalog (`/guesthouses`)
      - *Name*: e.g. `"Chobe Riverview Retreat"`.
      - *City*: Choose from Gaborone, Kasane, Maun, Francistown, Palapye, Ghanzi, or Other.
      - *Country*: Defaults to `"Botswana"`.
-     - *Nightly Tariff*: Enter price in BWP (e.g. `1200`).
+     - *Price per Night*: Enter price in BWP (e.g. `1200`).
      - *Contact Details*: Phone number and email for reservations.
      - *Description*: Brief summary of the guesthouse atmosphere and rooms.
    - **Section 2: Amenities & Comforts**:
@@ -163,8 +166,8 @@ Click **"Guesthouses"** in the left sidebar to open the catalog (`/guesthouses`)
      - Automatically populated based on your selected city.
      - Click *"Verify on Google Maps"* to open the location pin in a new tab.
    - **Section 4: Logo & Gallery Photos**:
-     - Choose a file for the main cover logo.
-     - Choose multiple image files for the gallery.
+     - Choose a PNG, JPG, or WEBP file (up to 5MB) for the main cover photo.
+     - Choose multiple image files (up to 5MB each) for the gallery; they upload to Firebase Storage when saved.
 3. Check the **Live Preview** on the right side of the screen: it updates in real-time as you type!
 4. Click **"Register Guesthouse"**. You will see a green checkmark notice, and you will be redirected to the catalog.
 

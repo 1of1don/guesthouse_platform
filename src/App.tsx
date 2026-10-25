@@ -24,7 +24,7 @@ function ProtectedRoute({ children }: { children: React.ReactElement }) {
             MiCasa SuCasa
           </p>
           <p className="text-xs text-[#7A695C] dark:text-[#A8988B]">
-            Verifying administrative access...
+            Connecting to Firebase and verifying access...
           </p>
         </div>
       </div>
@@ -86,4 +86,3 @@ export default function App() {
     </SettingsProvider>
   );
 }
-
