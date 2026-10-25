@@ -1,7 +1,0 @@
-target/
-.env
-*.class
-*.jar
-!.mvn/wrapper/*.jar
-.idea/
-.vscode/
