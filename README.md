@@ -1,2 +1,0 @@
-# guesthouse_platform
-Brighton
