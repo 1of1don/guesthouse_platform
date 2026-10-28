@@ -23,18 +23,31 @@ export default function AddEditGuesthouse() {
   const navigate = useNavigate();
   const [form, setForm] = useState<Guesthouse>(empty);
   const [amenitiesInput, setAmenitiesInput] = useState('');
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
+  const [loading, setLoading] = useState(Boolean(id));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    if (id) {
-      api.getGuesthouse(id).then((g) => {
-        setForm(g);
-        setAmenitiesInput(g.amenities.join(', '));
-      });
-    }
+    if (!id) return;
+    api.getGuesthouse(id)
+      .then((guesthouse) => {
+        setForm(guesthouse);
+        setAmenitiesInput(guesthouse.amenities.join(', '));
+      })
+      .catch((cause: unknown) => {
+        setError(
+          cause instanceof Error ? cause.message : 'Unable to load guesthouse.',
+        );
+      })
+      .finally(() => setLoading(false));
   }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
+    setError('');
     const payload = {
       ...form,
       amenities: amenitiesInput
@@ -42,17 +55,34 @@ export default function AddEditGuesthouse() {
         .map((a) => a.trim())
         .filter(Boolean),
     };
-    if (id) await api.updateGuesthouse(id, payload);
-    else await api.createGuesthouse(payload);
-    navigate('/guesthouses');
+    try {
+      const images = { logo: logoFile, gallery: galleryFiles };
+      if (id) await api.updateGuesthouse(id, payload, images);
+      else await api.createGuesthouse(payload, images);
+      navigate('/guesthouses');
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : 'Unable to save guesthouse.',
+      );
+      setSaving(false);
+    }
   };
 
   const handleDelete = async () => {
     if (id && confirm('Delete this guesthouse?')) {
-      await api.deleteGuesthouse(id);
-      navigate('/guesthouses');
+      setError('');
+      try {
+        await api.deleteGuesthouse(id);
+        navigate('/guesthouses');
+      } catch (cause) {
+        setError(
+          cause instanceof Error ? cause.message : 'Unable to delete guesthouse.',
+        );
+      }
     }
   };
+
+  if (loading) return <p>Loading guesthouse...</p>;
 
   return (
     <div className="form-page">
@@ -60,6 +90,7 @@ export default function AddEditGuesthouse() {
         {id ? 'Edit Guesthouse' : 'Add Guesthouse'}
       </h1>
 
+      {error && <p className="form-error" role="alert">{error}</p>}
       <form onSubmit={handleSubmit} className="gh-form">
         <div className="form-group">
           <label className="form-label">Name *</label>
@@ -132,6 +163,7 @@ export default function AddEditGuesthouse() {
             <label className="form-label">Price per night (P) *</label>
             <input
               type="number"
+              min="0"
               className="form-input"
               value={form.pricePerNight}
               onChange={(e) =>
@@ -146,31 +178,80 @@ export default function AddEditGuesthouse() {
           <label className="form-label">
             Location (Google Maps coordinates) *
           </label>
-          <div className="map-placeholder">
-            📍 Pin set — {form.coordinates.lat}, {form.coordinates.lng}
+          <div className="form-row">
+            <input
+              type="number"
+              className="form-input"
+              aria-label="Latitude"
+              min="-90"
+              max="90"
+              step="any"
+              value={form.coordinates.lat}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  coordinates: {
+                    ...form.coordinates,
+                    lat: Number(e.target.value),
+                  },
+                })
+              }
+              required
+            />
+            <input
+              type="number"
+              className="form-input"
+              aria-label="Longitude"
+              min="-180"
+              max="180"
+              step="any"
+              value={form.coordinates.lng}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  coordinates: {
+                    ...form.coordinates,
+                    lng: Number(e.target.value),
+                  },
+                })
+              }
+              required
+            />
           </div>
         </div>
 
         <div className="form-row">
           <div className="upload-box">
             <p className="upload-box-title">Logo</p>
-            <button type="button" className="upload-btn">
-              Change image
-            </button>
+            {form.logo && !logoFile && (
+              <img className="image-preview" src={form.logo} alt="Current logo" />
+            )}
+            <input
+              type="file"
+              className="form-input"
+              accept="image/*"
+              onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
+            />
+            {logoFile && <p className="form-hint">{logoFile.name}</p>}
           </div>
           <div className="upload-box">
             <p className="upload-box-title">
-              Gallery ({form.gallery?.length || 0} images)
+              Gallery ({(form.gallery?.length || 0) + galleryFiles.length} images)
             </p>
-            <button type="button" className="upload-btn">
-              Change image
-            </button>
+            <input
+              type="file"
+              className="form-input"
+              accept="image/*"
+              multiple
+              onChange={(e) => setGalleryFiles(Array.from(e.target.files ?? []))}
+            />
+            <p className="form-hint">Selected gallery images are added to the existing ones.</p>
           </div>
         </div>
 
         <div className="form-actions">
-          <button type="submit" className="btn btn-primary">
-            Save Changes
+          <button type="submit" className="btn btn-primary" disabled={saving}>
+            {saving ? 'Saving...' : 'Save Changes'}
           </button>
           {id && (
             <button

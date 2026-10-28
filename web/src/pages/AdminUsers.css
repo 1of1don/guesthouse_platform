@@ -44,3 +44,17 @@
 .text-muted {
   color: var(--text-muted);
 }
+
+.admin-setup-notice {
+  margin: -8px 0 20px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-body);
+  background: var(--bg-card);
+}
+
+.admin-load-error {
+  margin-bottom: 16px;
+  color: var(--danger);
+}

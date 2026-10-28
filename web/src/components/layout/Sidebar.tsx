@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useState } from 'react';
+import { useAuth } from '../../context/useAuth';
 import './Sidebar.css';
 
 const links = [
@@ -12,10 +13,18 @@ const links = [
 export default function Sidebar() {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const [logoutError, setLogoutError] = useState('');
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const handleLogout = async () => {
+    setLogoutError('');
+    try {
+      await logout();
+      navigate('/login');
+    } catch (cause) {
+      setLogoutError(
+        cause instanceof Error ? cause.message : 'Unable to log out.',
+      );
+    }
   };
 
   return (
@@ -39,9 +48,8 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <button onClick={handleLogout} className="sidebar-logout">
-        Log out
-      </button>
+      {logoutError && <p role="alert">{logoutError}</p>}
+      <button onClick={handleLogout} className="sidebar-logout">Log out</button>
     </aside>
   );
 }
