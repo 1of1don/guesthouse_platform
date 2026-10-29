@@ -1,6 +1,3 @@
-// Mi Casa Es Su Casa: a simple guesthouse booking app for Expo.
-// Everything lives in this one file so it is easy to follow from top to bottom.
-
 import { useState } from "react";
 import { Modal, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
