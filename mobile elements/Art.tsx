@@ -1,5 +1,4 @@
 // A simple drawn picture of a house, used until you have real photos.
-// To use real photos later, replace <Art /> with <Image source={{ uri: "..." }} />.
 import Svg, { Defs, LinearGradient, Stop, Rect, Circle, Path } from "react-native-svg";
 import type { Stay } from "./data";
 
