@@ -1,0 +1,21 @@
+// Cloud Storage rules. Images live at guesthouses/{guesthouseId}/{fileName}.
+// Deploy:  firebase deploy --only storage   (run inside /backend)
+// firestore.exists() lets these rules reuse the /admins collection, so there is one admin list.
+// The first deploy that uses it asks you to allow Storage to read Firestore (Firebase console prompt).
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAdmin() {
+      return request.auth != null
+        && firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+    match /guesthouses/{guesthouseId}/{fileName} {
+      allow read: if true;
+      // Create or replace: admin only, images only, under 5 MB.
+      allow create, update: if isAdmin()
+        && request.resource.contentType.matches('image/.*')
+        && request.resource.size < 5 * 1024 * 1024;
+      allow delete: if isAdmin();
+    }
+  }
+}
