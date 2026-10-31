@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Mi Casa Es Su Casa</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{--bg1:#f4f7fb;--bg2:#e6eef8;--bg3:#cfe3f5;--acc:#7ed957;--atx:#10240a;--tx:#121a2b;--tx2:rgba(18,26,43,.55);--gl:rgba(255,255,255,.72);--gb:rgba(255,255,255,.95);--sh:rgba(40,70,110,.14);
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:#05080f;font-family:var(--font);display:flex;justify-content:center}
+#app{position:relative;width:100%;max-width:430px;height:100%;overflow:hidden;color:var(--tx);background:linear-gradient(170deg,var(--bg1),var(--bg2));transition:background .6s,color .6s}
+.blob{position:absolute;border-radius:50%;filter:blur(55px);pointer-events:none;transition:background .6s}
+.b1{width:240px;height:240px;background:var(--bg3);top:-50px;right:-70px;opacity:.8}.b2{width:200px;height:200px;background:var(--acc);bottom:90px;left:-80px;opacity:.25}
+svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.glass{background:var(--gl);border:1px solid var(--gb);backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);box-shadow:0 8px 28px var(--sh);transition:background .6s,border-color .6s}
+.page{position:absolute;inset:0;overflow-y:auto;padding:16px 16px 120px;opacity:0;pointer-events:none;transform:translateX(30px);transition:opacity .35s,transform .35s}
+.page.on{opacity:1;pointer-events:auto;transform:none}.page.left{transform:translateX(-30px)}
+.row{display:flex;align-items:center;gap:10px}.sp{justify-content:space-between}
+h1{font-size:26px;letter-spacing:-.5px}h3{font-size:17px}.m{color:var(--tx2);font-size:12px}
+.ib{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--gb);background:var(--gl);color:var(--tx);cursor:pointer}
+.av{width:42px;height:42px;border-radius:50%;background:var(--acc);color:var(--atx);display:grid;place-items:center;font-weight:700}
+.search{border-radius:16px;padding:12px 14px;margin:14px 0}.search input{flex:1;border:0;background:none;color:var(--tx);font-size:14px;outline:0;min-width:0}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px}.chips::-webkit-scrollbar{display:none}
+.chip{padding:8px 16px;border-radius:12px;font-size:13px;white-space:nowrap;cursor:pointer}.chip.on{background:var(--acc);color:var(--atx);border-color:transparent;font-weight:600}
+.hs{display:flex;gap:12px;overflow-x:auto;padding:10px 0 16px}.hs::-webkit-scrollbar{display:none}
+.rc{flex:none;width:170px;height:225px;border-radius:24px;overflow:hidden;position:relative;cursor:pointer;box-shadow:0 10px 24px var(--sh)}
+.pill{position:absolute;padding:4px 9px;border-radius:99px;font-size:11px;font-weight:600;display:flex;gap:4px;align-items:center;color:var(--tx)}
+.rc .ov{position:absolute;left:8px;right:8px;bottom:8px;padding:9px 11px;border-radius:16px;font-size:13px}
+.li{padding:10px;border-radius:20px;margin-bottom:10px;cursor:pointer}
+.th{width:62px;height:62px;border-radius:16px;overflow:hidden;flex:none}
+.star{color:#f5a623}.str{display:flex;align-items:center;gap:3px;font-size:12px}.str .i{width:14px;height:14px;fill:#f5a623;stroke:#f5a623}
+.pr{font-weight:700;font-size:14px}
+nav{position:absolute;left:50%;bottom:calc(14px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:flex;gap:4px;padding:8px;border-radius:28px;z-index:20}
+nav button{position:relative;width:56px;height:48px;border:0;border-radius:18px;background:none;color:var(--tx);cursor:pointer;display:grid;place-items:center;transition:transform .25s,background .3s}
+nav button:hover{transform:translateY(-4px) scale(1.08)}nav button.on{background:var(--acc);color:var(--atx)}
+nav button .tip{position:absolute;bottom:60px;left:50%;transform:translate(-50%,6px);font-size:11px;padding:5px 9px;border-radius:8px;background:var(--tx);color:var(--bg1);opacity:0;pointer-events:none;transition:.2s;white-space:nowrap}
+nav button:hover .tip,nav button:active .tip{opacity:1;transform:translate(-50%,0)}
+#spot{padding:0;overflow-y:scroll;scroll-snap-type:y mandatory}
+.slide{height:100%;scroll-snap-align:start;position:relative;overflow:hidden}.slide>svg{position:absolute;inset:0;width:100%;height:100%}
+.slide .info{position:absolute;left:14px;right:76px;bottom:104px;padding:16px;border-radius:24px}
+.rail{position:absolute;right:12px;bottom:112px;display:flex;flex-direction:column;gap:14px;align-items:center;font-size:11px;text-align:center}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.tag{display:flex;gap:5px;align-items:center;font-size:11px;padding:5px 10px;border-radius:99px}.tag .i{width:14px;height:14px}
+.themes{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
+.tc{border-radius:20px;padding:10px;cursor:pointer;position:relative}.tc.on{outline:2px solid var(--acc)}
+.sw{display:flex;height:44px;border-radius:12px;overflow:hidden;margin-bottom:8px}.sw i{flex:1}.tc .i{position:absolute;top:10px;right:10px;width:16px;height:16px;color:#fff}
+.btn{border:0;border-radius:16px;padding:14px;font-weight:700;font-size:15px;background:var(--acc);color:var(--atx);cursor:pointer;width:100%}
+#det{position:absolute;inset:0;z-index:25;overflow-y:auto;background:var(--bg1);transform:translateX(100%);transition:transform .4s cubic-bezier(.2,.8,.2,1)}#det.on{transform:none}
+.hero{height:300px;position:relative}.hero>svg{position:absolute;inset:0;width:100%;height:100%}
+.sheet{margin-top:-28px;position:relative;border-radius:28px 28px 0 0;padding:20px 18px 110px;background:var(--bg1)}
+.bar{position:absolute;left:14px;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));padding:10px;border-radius:24px;display:flex;gap:10px;z-index:3;position:fixed;max-width:402px;margin:0 auto}
+.ph{display:flex;gap:10px;overflow-x:auto;margin-top:8px}.ph div{flex:none;width:84px;height:84px;border-radius:16px;overflow:hidden}
+.am{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0 16px}.am div{text-align:center;font-size:11px;padding:10px 4px;border-radius:16px;display:grid;justify-items:center;gap:5px}
+.scr{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:22px;background:linear-gradient(160deg,var(--bg3),var(--bg2));transition:opacity .4s,visibility .4s}.scr.off{opacity:0;visibility:hidden}
+.card{width:100%;border-radius:28px;padding:26px 22px;position:relative}
+.inp{width:100%;padding:14px;margin-top:12px;border-radius:14px;border:1px solid var(--gb);background:var(--gl);color:var(--tx);font-size:15px;outline:0}
+.soc{display:flex;gap:10px;margin-top:12px}.soc button{flex:1;padding:12px;border-radius:14px;color:var(--tx);font-size:14px;cursor:pointer}
+#ov{position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:50;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:.3s}#ov.on{opacity:1;pointer-events:auto}
+#bs{width:100%;padding:22px 18px calc(24px + env(safe-area-inset-bottom,0px));border-radius:28px 28px 0 0;background:var(--bg1);transform:translateY(100%);transition:transform .35s}#ov.on #bs{transform:none}
+#toast{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));left:50%;transform:translate(-50%,-80px);z-index:60;padding:11px 18px;border-radius:99px;font-size:13px;transition:transform .4s;white-space:nowrap}#toast.on{transform:translate(-50%,0)}
+.er{color:#e5484d;font-size:12px;min-height:16px;margin-top:6px}
+
+.page{transition:opacity .45s cubic-bezier(.22,.9,.3,1),transform .45s cubic-bezier(.22,.9,.3,1);transform:translateX(44px) scale(.98)}
+.page.left{transform:translateX(-44px) scale(.98)}
+@keyframes up{from{opacity:0;transform:translateY(14px)}}
+.page.enter:not(#spot):not(#p-map)>*{animation:up .5s .04s both}
+nav button.on{background:none;color:var(--atx)}nav button{z-index:1}
+nav .ind{position:absolute;left:8px;top:8px;width:56px;height:48px;border-radius:18px;background:var(--acc);transition:transform .45s cubic-bezier(.22,.9,.3,1)}
+nav{gap:4px}
+.seg{display:flex;padding:4px;border-radius:16px;margin-bottom:14px}.seg div{flex:1;text-align:center;padding:9px;border-radius:12px;font-size:13px;cursor:pointer;transition:.3s}.seg div.on{background:var(--acc);color:var(--atx);font-weight:600}
+
+#p-map{padding:0;overflow:hidden}
+.mh{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));left:16px;right:16px;z-index:2}
+.mp{position:absolute;left:0;top:90px;width:100%;height:calc(100% - 90px)}
+.pn2{cursor:pointer}.pn2 rect{fill:var(--bg1);stroke:var(--acc);stroke-width:1.5;transition:.3s}.pn2 text{fill:var(--tx);font-size:11px;font-weight:700;text-anchor:middle}.pn2 circle{fill:var(--acc)}
+.pn2.on rect{fill:var(--acc)}.pn2.on text{fill:var(--atx)}
+.mc{position:absolute;left:14px;right:14px;bottom:96px;padding:10px;border-radius:22px;z-index:3;animation:up .35s both}
+@keyframes pu{50%{r:16;opacity:.2}}.pulse{animation:pu 1.8s infinite;fill:#3b82f6}
+
+.grp{border-radius:18px;overflow:hidden;margin-bottom:18px}
+.st{display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;border-bottom:1px solid var(--gb);font-size:15px}.grp .st:last-child{border-bottom:0}
+.si{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:#fff;flex:none}.si .i{width:18px;height:18px}
+.st .v{margin-left:auto;color:var(--tx2);font-size:14px}
+.sh{font-size:12px;color:var(--tx2);text-transform:uppercase;margin:0 14px 6px;letter-spacing:.5px}
+.tg{width:46px;height:28px;border-radius:99px;background:var(--gb);position:relative;transition:.3s}.tg.on{background:var(--acc)}
+.tg::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.3s;box-shadow:0 1px 3px #0004}.tg.on::after{transform:translateX(18px)}
+.nh{display:grid;grid-template-columns:90px 1fr 90px;align-items:center;margin:8px 0 16px}
+@keyframes pin{from{opacity:0;transform:translateX(34px)}}@keyframes pout{from{opacity:0;transform:translateX(-34px)}}
+.push{animation:pin .4s cubic-bezier(.22,.9,.3,1) both!important}.pop{animation:pout .4s cubic-bezier(.22,.9,.3,1) both!important}
+.bar2{display:flex;align-items:center;gap:8px;font-size:12px;margin:5px 0}.bar2 i{flex:1;height:6px;border-radius:9px;background:var(--gb);overflow:hidden}.bar2 u{display:block;height:100%;background:#f5a623}
+.rv{padding:12px;border-radius:16px;margin-top:8px;font-size:13px}
+
+:root{--font:'Sora',system-ui,-apple-system,'Segoe UI',sans-serif}
+button,input,select,textarea{font:inherit}
+#app{--info-op:.62}
+.slide .info.glass{background:color-mix(in srgb,var(--bg1) calc(var(--info-op)*100%),transparent);backdrop-filter:blur(28px) saturate(150%);-webkit-backdrop-filter:blur(28px) saturate(150%)}
+.slide>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.rc svg,.rc img,.th svg,.th img,.ph svg,.ph img,.gi svg,.gi img,.gs svg,.gs img{width:100%;height:100%;display:block;object-fit:cover}
+.tc{text-align:center}.tc svg.cc{width:88px;height:88px;display:block;margin:2px auto 8px;transition:transform .4s}.tc:active svg.cc{transform:scale(.92)}
+svg.cc circle{transform-box:fill-box;transform-origin:center bottom}
+.tc.on svg.cc circle{animation:cp 2.6s ease-in-out infinite}.tc.on svg.cc circle:nth-child(2){animation-delay:.15s}.tc.on svg.cc circle:nth-child(3){animation-delay:.3s}.tc.on svg.cc circle:nth-child(4){animation-delay:.45s}
+@keyframes cp{50%{transform:scale(1.045)}}
+.dot{position:absolute;top:-7px;right:-9px;background:var(--acc);color:var(--atx);font-size:10px;border-radius:99px;padding:1px 6px}
+.sh2{font-size:12px;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;margin:16px 2px 8px}
+.rg{width:100%;accent-color:var(--acc);margin:6px 0}
+#bs{max-height:84%;overflow:auto}
+.sk{background:linear-gradient(90deg,var(--gl),var(--gb),var(--gl));background-size:200% 100%;animation:shm 1.2s infinite;border-radius:20px}@keyframes shm{to{background-position:-200% 0}}
+.gv{display:grid;grid-template-columns:1fr 1fr;gap:12px}.gc{border-radius:20px;overflow:hidden;cursor:pointer}.gc .gi{height:110px}.gc .gb{padding:9px 11px;font-size:13px}
+.gal{position:absolute;inset:0;display:flex;overflow-x:auto;scroll-snap-type:x mandatory}.gal::-webkit-scrollbar{display:none}.gs{flex:none;width:100%;height:100%;scroll-snap-align:center}
+#vw{position:absolute;inset:0;z-index:70;background:#000;display:none}#vw.on{display:block}
+.ib.sm{width:34px;height:34px}
+#cmpb{position:absolute;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:22;padding:9px 16px;border-radius:99px;font-size:13px;font-weight:600;transition:.35s;cursor:pointer}#cmpb.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+#off{position:absolute;top:0;left:0;right:0;z-index:80;text-align:center;padding:8px;font-size:12px;transform:translateY(-100%);transition:.3s}#off.on{transform:none}
+.bars{display:flex;gap:4px;margin-top:8px}.bars i{flex:1;height:4px;border-radius:9px;background:var(--gb);transition:.3s}.bars i.on{background:var(--acc)}
+
+.glass{transition:background-color .6s,border-color .6s,color .6s,box-shadow .6s,transform .25s cubic-bezier(.34,1.56,.64,1)}
+.ib,.chip,.btn,.li,.rc,.gc{transition:transform .25s cubic-bezier(.34,1.56,.64,1),background-color .45s,color .45s,border-color .45s,box-shadow .45s}
+.ib:active,.chip:active,.btn:active,.li:active,.rc:active,.gc:active,.tc:active{transform:scale(.95)}
+.st{transition:background-color .25s}.st:active{background:color-mix(in srgb,var(--tx) 8%,transparent)}
+.chip,.ib,.btn,.st,.tc,.rs{-webkit-user-select:none;user-select:none}
+.tg::after{transition:transform .38s cubic-bezier(.34,1.56,.64,1),width .2s}.tg:active::after{width:28px}.tg{transition:background-color .35s}
+.tc{outline:none!important;transition:transform .35s cubic-bezier(.34,1.56,.64,1),box-shadow .4s,background-color .6s}
+.tc.on{box-shadow:0 0 0 2.5px var(--acc),0 8px 28px var(--sh)}
+.tc.pop{animation:tp .5s cubic-bezier(.34,1.56,.64,1)}@keyframes tp{0%{transform:scale(.9)}60%{transform:scale(1.06)}100%{transform:scale(1)}}
+.lk{position:absolute;top:10px;right:10px;color:var(--tx2)}
+.rip{position:absolute;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;z-index:90;pointer-events:none;animation:rip .75s cubic-bezier(.4,0,.2,1) forwards}
+@keyframes rip{0%{transform:scale(0);opacity:.95}55%{opacity:.95}100%{transform:scale(70);opacity:0}}
+@keyframes bmp{0%{transform:scale(.6)}60%{transform:scale(1.35)}100%{transform:scale(1)}}
+.bmp svg.i[style*="fill:currentColor"]{animation:bmp .5s cubic-bezier(.34,1.56,.64,1)}
+.rate{display:flex;gap:6px;margin:8px 0}.rs{font-size:32px;line-height:1;cursor:pointer;color:color-mix(in srgb,var(--tx) 22%,transparent);transition:transform .35s cubic-bezier(.34,1.56,.64,1),color .25s}.rs.on{color:#f5a623;transform:scale(1.12)}.rs:active{transform:scale(.85)}
+.lockfx{display:inline-grid;place-items:center;width:54px;height:54px;border-radius:50%;background:var(--gl);border:1px solid var(--gb)}
+
+/* ===== v7: transition background, Figma warm look, Leaflet map, sheets ===== */
+/* Registered colours: lets the browser animate var() colours, so a theme change glides instead of snapping. */
+@property --bg1{syntax:'<color>';inherits:true;initial-value:#faf6f0}
+@property --bg2{syntax:'<color>';inherits:true;initial-value:#efe3d3}
+@property --bg3{syntax:'<color>';inherits:true;initial-value:#e8d9c5}
+@property --acc{syntax:'<color>';inherits:true;initial-value:#4a3427}
+#app{transition:--bg1 .9s,--bg2 .9s,--bg3 .9s,--acc .6s,color .6s}
+/* Aurora: two soft light pools drifting slowly behind everything. Tweak the % to change how strong they are. */
+#app::before{content:"";position:absolute;inset:-20%;pointer-events:none;
+ background:radial-gradient(55% 42% at 18% 8%,color-mix(in srgb,var(--bg3) 75%,transparent),transparent 70%),
+ radial-gradient(48% 38% at 86% 88%,color-mix(in srgb,var(--acc) 38%,transparent),transparent 70%);
+ animation:aur 24s ease-in-out infinite alternate}
+@keyframes aur{from{transform:translate3d(-3%,-2%,0) scale(1)}to{transform:translate3d(3%,3%,0) scale(1.12)}}
+.dk #app::after,#app.dk::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 80% at 50% 120%,rgba(0,0,0,.35),transparent 60%)}
+@media(prefers-reduced-motion:reduce){#app::before{animation:none}}
+/* Figma look: soft tiles, ghost buttons, calm notes */
+.tile{width:64px;height:64px;border-radius:20px;display:grid;place-items:center;background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--acc)}
+.btn.ghost{background:var(--gl);color:var(--tx);border:1px solid var(--gb)}
+.note{display:flex;gap:10px;align-items:flex-start;font-size:12px;color:var(--tx2);margin-top:14px;line-height:1.45}
+.sheet-t{font-size:24px;font-weight:700;letter-spacing:-.4px}
+.link{text-align:center;margin-top:14px;font-size:14px;font-weight:600;cursor:pointer}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px 0;text-align:center;font-size:14px;margin:10px 0}
+.cal b{font-size:11px;color:var(--tx2);padding-bottom:6px}.cal i{font-style:normal;padding:9px 0;cursor:pointer}
+.cal i.in{background:color-mix(in srgb,var(--acc) 18%,transparent)}.cal i.e{background:var(--acc);color:var(--atx);border-radius:99px}
+/* Real map (Leaflet + OpenStreetMap). isolate keeps its layers below the nav bar. */
+#lm{isolation:isolate;background:var(--bg2)}
+.pin{transform:translate(-50%,-100%);background:var(--acc);color:var(--atx);padding:5px 10px;border-radius:99px;font:700 11px/1 system-ui;white-space:nowrap;box-shadow:0 4px 12px var(--sh);border:2px solid #fff}
+.dk .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.8) contrast(.9)}
+.leaflet-container{font:inherit}
+</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Press+Start+2P&family=Pixelify+Sans:wght@400;700&display=swap" rel="stylesheet"></head><body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16 16l5 5"/></symbol>
+<symbol id="star" viewBox="0 0 24 24"><path d="M12 3l2.8 6 6.2.7-4.7 4.3 1.5 6.5L12 17l-5.8 3.5 1.5-6.5L3 9.7 9.2 9z"/></symbol>
+<symbol id="home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+<symbol id="bm" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></symbol>
+<symbol id="user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-5 15-5 16 0"/></symbol>
+<symbol id="sl" viewBox="0 0 24 24"><path d="M6 3v18M12 3v18M18 3v18"/><circle cx="6" cy="8" r="2" fill="var(--bg1)"/><circle cx="12" cy="15" r="2" fill="var(--bg1)"/><circle cx="18" cy="9" r="2" fill="var(--bg1)"/></symbol>
+<symbol id="pin" viewBox="0 0 24 24"><path d="M12 21s7-6 7-12a7 7 0 0 0-14 0c0 6 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></symbol>
+<symbol id="share" viewBox="0 0 24 24"><path d="M5 13v7h14v-7M12 15V3M8 7l4-4 4 4"/></symbol>
+<symbol id="bell" viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0 1 12 0v6l2 2H4zM10 21h4"/></symbol>
+<symbol id="back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+<symbol id="wifi" viewBox="0 0 24 24"><path d="M2 9a15 15 0 0 1 20 0M5.5 12.5a10 10 0 0 1 13 0M9 16a5 5 0 0 1 6 0"/><circle cx="12" cy="19.5" r=".8"/></symbol>
+<symbol id="tv" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/></symbol>
+<symbol id="paw" viewBox="0 0 24 24"><circle cx="6" cy="10" r="2"/><circle cx="10" cy="6" r="2"/><circle cx="14" cy="6" r="2"/><circle cx="18" cy="10" r="2"/><path d="M12 12c-4 0-6 4-5 6s3 1 5 1 4 1 5-1-1-6-5-6z"/></symbol>
+<symbol id="pool" viewBox="0 0 24 24"><path d="M2 17c2 0 2-1.5 5-1.5s3 1.5 5 1.5 3-1.5 5-1.5 3 1.5 5 1.5M2 21c2 0 2-1.5 5-1.5s3 1.5 5 1.5 3-1.5 5-1.5 3 1.5 5 1.5M8 13V5a2 2 0 0 1 4 0M14 13V5a2 2 0 0 1 4 0M8 9h6"/></symbol>
+<symbol id="cup" viewBox="0 0 24 24"><path d="M4 8h13v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM17 10h2a2 2 0 0 1 0 5h-2M8 3v2M12 3v2"/></symbol>
+<symbol id="tag" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/></symbol>
+<symbol id="moon" viewBox="0 0 24 24"><path d="M20 14A8 8 0 0 1 10 4a8 8 0 1 0 10 10zM17 3v4M15 5h4"/></symbol>
+<symbol id="cam" viewBox="0 0 24 24"><path d="M3 8h4l2-3h6l2 3h4v12H3z"/><circle cx="12" cy="13" r="4"/></symbol>
+<symbol id="lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+<symbol id="chat" viewBox="0 0 24 24"><path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M8 10.5h.01M12 10.5h.01M16 10.5h.01"/></symbol>
+<symbol id="eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="card" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M6 15h3"/></symbol>
+<symbol id="out" viewBox="0 0 24 24"><path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"/></symbol>
+<symbol id="map" viewBox="0 0 24 24"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14"/></symbol>
+<symbol id="tg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/></symbol>
+<symbol id="chk" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
+<symbol id="dice" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 8.5h.01M15.5 8.5h.01M12 12h.01M8.5 15.5h.01M15.5 15.5h.01"/></symbol>
+<symbol id="grid" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></symbol>
+<symbol id="list" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+<symbol id="cmp" viewBox="0 0 24 24"><rect x="3" y="7" width="12" height="12" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2"/></symbol>
+<symbol id="fnt" viewBox="0 0 24 24"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></symbol>
+<symbol id="dash" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+<symbol id="add" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/></symbol>
+<symbol id="users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 20c1-5 12-5 14 0M16 5a3.5 3.5 0 0 1 0 7M18 15c2 1 3 3 3.5 5"/></symbol>
+<symbol id="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+<symbol id="pal" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.5 0 2-1 1.5-2s0-2 1.5-2h2a3 3 0 0 0 3-3 9 9 0 0 0-8-11z"/><path d="M8 11h.01M12 8h.01M16 11h.01"/></symbol>
+<symbol id="coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c0-1 1-1.5 2.5-1.5s2.5.5 2.5 1.5-1 1.5-2.5 1.5-2.5.5-2.5 1.5 1 1.5 2.5 1.5 2.5-.5 2.5-1.5"/></symbol>
+<symbol id="glb" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></symbol>
+<symbol id="inf" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+<symbol id="fit" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+<symbol id="call" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></symbol>
+<symbol id="cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol></defs></svg>
+<div id="app">
+<div class="blob b1"></div><div class="blob b2"></div>
+<section class="page on" id="p-home"></section><section class="page" id="p-map"></section><section class="page" id="spot"></section>
+<section class="page" id="p-saved"></section><section class="page" id="p-me"></section>
+<nav class="glass" id="nav"></nav>
+<div id="det"></div>
+<div id="ov"><div id="bs"></div></div><div id="toast" class="glass"></div><div id="cmpb" class="glass" onclick="cmpSheet()"></div><div id="off" class="glass">You are offline · showing saved stays</div><div id="vw"></div>
+<div class="scr" id="login"><div class="card glass">
+<div class="blob b1" style="opacity:.4"></div>
+<h1>Welcome back</h1><p class="m" style="margin-top:4px">Sign in to Mi Casa Es Su Casa</p>
+<input class="inp" id="nm" placeholder="Full name" style="display:none"><input class="inp" id="em" placeholder="Email" value="demo@micasa.app">
+<div style="position:relative"><input class="inp" id="pw" type="password" oninput="strength()" placeholder="Password" value="password123"><span style="position:absolute;right:12px;top:26px;cursor:pointer" onclick="pw.type=pw.type=='password'?'text':'password'"><svg class="i"><use href="#eye"/></svg></span></div>
+<input class="inp" id="pw2" type="password" placeholder="Confirm password" style="display:none"><p class="m" id="tm" style="display:none;margin-top:8px">Use at least 8 characters, including a number. By creating an account you agree to our Terms of Use and Privacy Policy.</p><div class="er" id="er"></div>
+<div class="bars" id="str" style="display:none"><i></i><i></i><i></i><i></i></div><button class="btn" id="lb" onclick="login()">Sign In</button><p class="m" style="text-align:center;margin-top:12px"><span style="cursor:pointer" onclick="forgot()">Forgot password?</span> · <span style="cursor:pointer;color:var(--acc)" id="sw" onclick="authMode()">Create account</span></p>
+<p class="m" style="text-align:center;margin:14px 0 0">or continue with</p>
+<div class="soc"><button class="glass" onclick="login(1)">Google</button><button class="glass" onclick="login(1)">Apple</button></div>
+<p class="m" style="text-align:center;margin-top:16px;cursor:pointer" onclick="guest()">Continue as guest</p>
+</div></div>
+</div>
+<script>
+const ic=(n,s)=>`<svg class="i"${s?` style="${s}"`:""}><use href="#${n}"/></svg>`;
+/* mock data: p=sky top, q=sky bottom, g=ground, r=roof */
+const H=[
+{id:1,n:"Riverside Guesthouse",c:"Gaborone",co:"Botswana",cat:"City",p:650,r:4.9,k:10,la:-24.6282,lo:25.9231,a:["wifi","pool","cup","tv"],d:"A cozy riverside stay with garden views, walking distance to the CBD.",s:["#6c7bd9","#f0c8e8","#3a6a5a","#2a2f4a"]},
+{id:2,n:"Savanna Sunset Lodge",c:"Kasane",co:"Botswana",cat:"Safari",p:890,r:4.8,k:124,la:-17.8101,lo:25.1514,a:["wifi","pool","cup","paw"],d:"Thatched chalets on the Chobe River. Elephants stroll past the deck most evenings.",s:["#ff9a5a","#ffd9a0","#5b7a3a","#8a3b12"]},
+{id:3,n:"Victoria Falls Rest",c:"Victoria Falls",co:"Zimbabwe",cat:"Safari",p:1100,r:4.7,k:88,la:-17.9243,lo:25.8572,a:["wifi","pool","cup","tv"],d:"Mist-cooled verandas a short walk from the falls.",s:["#4aa3df","#bfe6f5","#2f8a5a","#7a4a2a"]},
+{id:4,n:"Acacia Lodge",c:"Francistown",co:"Botswana",cat:"Lodge",p:480,r:4.6,k:5,la:-21.1699,lo:27.5084,a:["wifi","cup","tv"],d:"Quiet lodge under old acacia trees, close to the airport and city centre.",s:["#f2b36b","#fde7c4","#6e8b4a","#9a4a2a"]},
+{id:5,n:"Kalahari Rest Stop",c:"Maun",co:"Botswana",cat:"Safari",p:720,r:4.5,k:6,la:-19.9833,lo:23.4167,a:["wifi","pool","paw","cup"],d:"Base for Okavango Delta trips, with a shaded courtyard and campfire.",s:["#7fb7e6","#e6f3fb","#8a9a6a","#4a5a6a"]},
+{id:6,n:"Serowe Heritage House",c:"Serowe",co:"Botswana",cat:"Lodge",p:420,r:4.5,k:57,la:-22.3876,lo:26.7108,a:["wifi","cup","paw","tv"],d:"A restored family home with a shaded garden near the rhino sanctuary.",s:["#e9a36b","#fbe3c4","#7a8b4a","#8a3a2a"]},
+{id:7,n:"Desert Rose Inn",c:"Ghanzi",co:"Botswana",cat:"Budget",p:390,r:4.2,k:5,la:-21.7,lo:21.65,a:["wifi","tv","tag"],d:"Simple, clean rooms on the Trans-Kalahari route.",s:["#b58fd6","#f3e1f7","#6a7a5a","#5a3a6a"]},
+{id:8,n:"Joburg Garden Suites",c:"Johannesburg",co:"South Africa",cat:"City",p:980,r:4.4,k:140,la:-26.2041,lo:28.0473,a:["wifi","pool","tv","card"],d:"Leafy suburban suites with secure parking and fast fibre.",s:["#5a8fd6","#d9e8f7","#4a7a4a","#2a3a5a"]}];
+const AL={wifi:"Wifi",pool:"Pool",cup:"Breakfast",paw:"Pets",tv:"TV",tag:"Deals",card:"Card pay"};
+const CATS=["All","Safari","City","Lodge","Budget"];
+const mk=(name,c,d,atx,free,g)=>({name,free,g,c,atx,...(d?{tx:"#f4f6f8",tx2:"rgba(244,246,248,.6)",gl:"rgba(255,255,255,.10)",gb:"rgba(255,255,255,.22)",sh:"rgba(0,0,0,.45)"}:{tx:"#1d1a16",tx2:"rgba(29,26,22,.58)",gl:"rgba(255,255,255,.62)",gb:"rgba(255,255,255,.92)",sh:"rgba(60,50,40,.16)"})});
+const T={
+cream:{...mk("Warm Cream",["#faf6f0","#efe3d3","#e8d9c5","#4a3427"],0,"#fff",1),tx:"#4a3427",tx2:"rgba(74,52,39,.62)",gb:"rgba(235,221,203,.95)",sh:"rgba(74,52,39,.14)"},
+mviolet:mk("Midnight Violet",["#140f1d","#261a3c","#6b3a9e","#c9a2f5"],1,"#1a0a2e",0,"Purples"),
+sky:mk("Sky Blue",["#f4f8fd","#e1edfa","#b9d6f2","#2f7fd1"],0,"#fff",1),
+rose:mk("Rose Quartz",["#fbf1f3","#f0d6da","#d9a6ae","#a23d5f"],0,"#fff",1),
+midnight:mk("Coastal Midnight",["#061222","#123249","#447794","#7fc4e8"],1,"#041018",0,"Blues"),
+amber:mk("Amber Navy",["#1b2430","#28333F","#2F6895","#EE9014"],1,"#1a1000",0,"Blues"),
+rosetl:mk("Rose Teal",["#00050D","#18203C","#22587F","#C46EA1"],1,"#1a0612",0,"Pinks & Reds"),
+rouge:mk("Deep Rouge",["#10060a","#420001","#640000","#e0a3a0"],1,"#1a0505",0,"Pinks & Reds"),
+lav:mk("Lavender Mist",["#f6f3fb","#e4dcf3","#c3b2e6","#6b4bb5"],0,"#fff",0,"Purples"),
+violet:mk("Violet Night",["#120d1a","#2a1a45","#6b3fa0","#b88af0"],1,"#1a0a2e",0,"Purples"),
+mint:mk("Fresh Mint",["#f3faf4","#dff1e3","#b7e3c1","#7ed957"],0,"#10240a",0,"Greens"),
+emerald:mk("Cafe Emerald",["#052626","#0e4a3a","#1A734A","#BF7C2A"],1,"#fff",0,"Greens"),
+tang:mk("Tangerine",["#fff4ec","#fde0cc","#f9b48a","#e5501b"],0,"#fff",0,"Warm"),
+cocoa:mk("Velvet Cocoa",["#FFF6ED","#f0dcc3","#D2A679","#8B5E3C"],0,"#fff",0,"Warm"),
+ember:mk("Forest Ember",["#0B0F19","#213747","#214B62","#EB6953"],1,"#1a0802",0,"Warm"),
+stone:mk("Soft Stone",["#f5f3f0","#e5e0d9","#c9c1b6","#4a4540"],0,"#fff",0,"Neutral"),
+noir:mk("Street Noir",["#0D0D0D","#262626","#8C3232","#d94c4c"],1,"#fff",0,"Neutral")};
+const CUR={BWP:{s:"P",r:1,n:"Botswana Pula"},USD:{s:"$",r:.073,n:"US Dollar"},ZAR:{s:"R",r:1.33,n:"South African Rand"},EUR:{s:"€",r:.067,n:"Euro"},GBP:{s:"£",r:.057,n:"British Pound"}};
+const fmt=p=>{const c=CUR[S.cur];return c.s+Math.round(p*c.r).toLocaleString()};
+const S={theme:"cream",user:null,page:"home",saved:new Set(),q:"All",s:"",cur:"BWP",place:"Gaborone",f:{max:1200,rate:0,am:[],co:"All"},sort:"rating",view:"list",cmp:[],recent:[],loading:true,font:"sora",op:.62,tn:2,tr:1,nf:null,signup:false,rev:{},rt:0,users:[{n:"Naledi M.",r:"Host",on:1},{n:"Tumelo K.",r:"Guest",on:1},{n:"Kabo S.",r:"Guest",on:0},{n:"Demo Guest",r:"Admin",on:1}],sub:null,vb:{x:0,y:0,w:420},prof:{name:"Demo Guest",email:"demo@micasa.app",phone:"+267 71 234 567",city:"Gaborone"},sel:null,me:null};
+const $=s=>document.querySelector(s);let U=0;
+function applyTheme(k){const t=T[k],r=$("#app").style;S.theme=k;$("#app").classList.toggle("dk",t.tx=="#f4f6f8");
+["bg1","bg2","bg3"].forEach((v,i)=>r.setProperty("--"+v,t.c[i]));r.setProperty("--acc",t.c[3]);
+["atx","tx","tx2","gl","gb","sh"].forEach(v=>r.setProperty("--"+v,t[v]))}
+/* scenic placeholder art (swap for real photos / logoUrl later) */
+function art(h,v){if(h.imgs&&h.imgs.length)return `<img src="${h.imgs[(v||0)%h.imgs.length]}" alt="">`;const u=++U,[a,b,g,r]=h.s,x=60+(h.id*53)%190;
+return `<svg viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="g${u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs><rect width="300" height="200" fill="url(#g${u})"/><circle cx="${x}" cy="${50+(v||0)*8}" r="22" fill="#fff" opacity=".75"/><path d="M0 150Q80 ${112+(v||0)*10} 150 140T300 ${125-(v||0)*8}V200H0z" fill="${g}"/><path d="M110 152v-30l40-26 40 26v30z" fill="#fff" opacity=".93"/><path d="M103 123l47-31 47 31" stroke="${r}" stroke-width="9" fill="none" stroke-linejoin="round"/><rect x="143" y="134" width="15" height="18" fill="${r}"/><rect x="118" y="128" width="12" height="10" fill="${b}"/></svg>`}
+const stars=h=>`<span class="str">${ic("star")}<b>${h.r||"New"}</b></span>`;
+const ORI=()=>S.me||[-24.6282,25.9231];
+const dkm=h=>{const[a,b]=ORI(),r=x=>x*Math.PI/180,q=Math.sin(r(h.la-a)/2)**2+Math.cos(r(a))*Math.cos(r(h.la))*Math.sin(r(h.lo-b)/2)**2;return Math.round(12742*Math.asin(Math.sqrt(q)))};
+const SN={rating:"Top rated",low:"Price low",high:"Price high",near:"Nearest"};
+function fx(){const f=S.f,l=H.filter(x=>(S.q=="All"||x.cat==S.q)&&(x.n+x.c).toLowerCase().includes(S.s.toLowerCase())&&x.p<=f.max&&x.r>=f.rate&&f.am.every(a=>x.a.includes(a))&&(f.co=="All"||x.co==f.co));
+return l.sort(S.sort=="low"?(a,b)=>a.p-b.p:S.sort=="high"?(a,b)=>b.p-a.p:S.sort=="near"?(a,b)=>dkm(a)-dkm(b):(a,b)=>b.r-a.r)}
+const nf=()=>(S.f.max<1200)+(S.f.rate>0)+S.f.am.length+(S.f.co!="All");
+/* ---- HOME ---- */
+function home(){$("#p-home").innerHTML=`<div class="row sp"><div><div class="m">Explore</div><div class="row" style="font-weight:600;gap:4px">${ic("pin","width:16px;height:16px")}${S.place}</div></div>
+<div class="row"><div class="chip glass on" style="padding:11px 12px" onclick="S.sub='currency';me(1);go('me')">${S.cur}</div><div class="ib" onclick="toast('No new notifications')">${ic("bell")}</div><div class="av" onclick="go('me')">${ini()}</div></div></div>
+<div class="search glass row">${ic("search")}<input placeholder="Find a stay or city" value="${S.s}" oninput="S.s=this.value;lists();map()"><span onclick="filt()" style="cursor:pointer;position:relative">${ic("sl")}${nf()?`<b class="dot">${nf()}</b>`:""}</span></div><div id="afc"></div>
+<div class="chips"><div class="chip glass ${S.dt?"on":""}" onclick="dates()">${ic("cal","width:14px;height:14px;vertical-align:-2px")} ${S.dt?dlab():"Any time"}</div><div class="chip glass" onclick="surprise()">${ic("dice","width:14px;height:14px;vertical-align:-2px")} Surprise me</div>${CATS.map(c=>`<div data-c="${c}" class="chip glass ${c==S.q?"on":""}" onclick="catPick(this,'${c}')">${c}</div>`).join("")}</div><div id="lst"></div>`;lists()}
+const cc=t=>`<svg class="cc" viewBox="0 0 100 100">${[[48,50],[37,61],[26,72],[15,83]].map(([r,y],i)=>`<circle cx="50" cy="${y}" r="${r}" fill="${t.c[i]}" stroke="${i?"rgba(255,255,255,.85)":"rgba(128,128,128,.35)"}" stroke-width="1.2"/>`).join("")}</svg>`;
+/* Typefaces shown in Settings > Display. n = label, v = CSS font-family value (keep a fallback at the end). */
+const FN={mc:{n:"Minecraft style",v:"'Press Start 2P',monospace"},terra:{n:"Terraria style",v:"'Pixelify Sans',system-ui,sans-serif"},sora:{n:"Sora",v:"'Sora',system-ui,sans-serif"},system:{n:"System",v:"system-ui,-apple-system,'Segoe UI',sans-serif"},serif:{n:"Serif",v:"Georgia,'Times New Roman',serif"}};
+const CITY={Gaborone:[-24.6282,25.9231],Maun:[-19.9833,23.4167],Kasane:[-17.8101,25.1514],Francistown:[-21.1699,27.5084],Serowe:[-22.3876,26.7108],Ghanzi:[-21.7,21.65],Palapye:[-22.55,27.13],Lobatse:[-25.22,25.69]};
+const sk=()=>`<div class="sk" style="height:200px;margin:10px 0 16px"></div>${[1,2,3].map(()=>'<div class="sk" style="height:82px;margin-bottom:10px"></div>').join("")}`;
+const mini=h=>`<div class="rc" style="width:120px;height:150px" onclick="open_(${h.id})">${art(h)}<div class="ov glass" style="font-size:11px;padding:6px 8px"><b>${h.n}</b></div></div>`;
+const li=h=>`<div class="li glass row" onclick="open_(${h.id})"><div class="th">${art(h)}</div><div style="flex:1;min-width:0"><b style="font-size:14px">${h.n}</b><div class="m row" style="gap:3px;margin:3px 0">${ic("pin","width:13px;height:13px")}${h.c} · ${dkm(h)} km</div>${stars(h)}</div><div class="pr">${fmt(h.p)}<div class="m" style="font-weight:400">/night</div></div></div>`;
+const gc=h=>`<div class="gc glass" onclick="open_(${h.id})"><div class="gi">${art(h)}</div><div class="gb"><b>${h.n}</b><div class="row sp" style="margin-top:4px">${stars(h)}<span class="pr" style="font-size:13px">${fmt(h.p)}</span></div></div></div>`;
+function lists(){const l=fx(),f=S.f,ch=[];
+if(f.max<1200)ch.push(["Up to "+fmt(f.max),"S.f.max=1200"]);if(f.rate)ch.push([f.rate+"+ stars","S.f.rate=0"]);f.am.forEach(a=>ch.push([AL[a],`S.f.am=S.f.am.filter(x=>x!='${a}')`]));if(f.co!="All")ch.push([f.co,"S.f.co='All'"]);
+$("#afc").innerHTML=ch.length?`<div class="chips">${ch.map(c=>`<div class="chip glass on" onclick="${c[1]};lists();map()">${c[0]} ×</div>`).join("")}</div>`:"";
+if(S.loading)return $("#lst").innerHTML=sk();
+if(!l.length)return $("#lst").innerHTML=`<div class="glass li" style="cursor:default;text-align:center;padding:26px">${ic("search","width:34px;height:34px;opacity:.6")}<h3 style="margin:10px 0 4px">No stays match</h3><p class="m">Try a wider price range or remove a filter.</p><button class="btn" style="margin-top:14px" onclick="resetF();S.q='All';S.s='';home()">Clear filters</button></div>`;
+const rec=l.slice(0,4),rv=S.recent.map(i=>H.find(h=>h.id==i)).filter(Boolean);
+$("#lst").innerHTML=`<h3>Recommended for you</h3><div class="hs">${rec.map((h,i)=>`<div class="rc" onclick="open_(${h.id})">${art(h,i)}<div class="pill glass" style="top:10px;left:10px">${h.c}</div><div class="pill glass" style="top:10px;right:10px"><span class="star">★</span>${h.r||"New"}</div><div class="ov glass"><b>${h.n}</b><div class="row sp" style="margin-top:3px"><span class="pr">${fmt(h.p)}<span class="m">/night</span></span><span onclick="event.stopPropagation();fav(${h.id})">${ic("bm","width:18px;height:18px;"+(S.saved.has(h.id)?"fill:currentColor":""))}</span></div></div></div>`).join("")}</div>
+${rv.length?`<h3>Recently viewed</h3><div class="hs">${rv.map(mini).join("")}</div>`:""}
+<div class="row sp" style="margin-bottom:10px"><h3>${l.length} stays</h3><div class="row"><div class="chip glass" onclick="filt()">${SN[S.sort]}</div><div class="ib sm" onclick="S.view=S.view=='list'?'grid':'list';lists()">${ic(S.view=="list"?"grid":"list","width:18px;height:18px")}</div></div></div>
+${S.view=="list"?l.map(li).join(""):`<div class="gv">${l.map(gc).join("")}</div>`}`}
+function resetF(){S.f={max:1200,rate:0,am:[],co:"All"};S.sort="rating"}
+function apply(){S.loading=true;home();map();setTimeout(()=>{S.loading=false;lists();map()},350)}
+function fc(){const e=$("#fcn");if(e)e.textContent=fx().length}
+function tgl(a,e){const m=S.f.am,i=m.indexOf(a);i>=0?m.splice(i,1):m.push(a);e.classList.toggle("on");fc()}
+function one(e){e.parentNode.querySelectorAll(".chip").forEach(x=>x.classList.toggle("on",x===e))}
+function catPick(e,c){S.q=c;e.parentNode.querySelectorAll(".chip[data-c]").forEach(x=>x.classList.toggle("on",x===e));lists();map()}
+function filt(){const f=S.f,all=[...new Set(H.flatMap(h=>h.a))],cos=["All",...new Set(H.map(h=>h.co))];
+$("#bs").innerHTML=`<div class="row sp"><h3>Filters</h3><span class="m" style="cursor:pointer" onclick="resetF();filt()">Reset</span></div>
+<div class="sh2">Max price · <b id="fp">${fmt(f.max)}</b></div><input type="range" class="rg" min="200" max="1200" step="50" value="${f.max}" oninput="S.f.max=+this.value;$('#fp').textContent=fmt(S.f.max);fc()">
+<div class="sh2">Minimum rating</div><div class="chips">${[0,4,4.5].map(r=>`<div class="chip glass ${f.rate==r?"on":""}" onclick="S.f.rate=${r};one(this);fc()">${r?r+"+":"Any"}</div>`).join("")}</div>
+<div class="sh2">Amenities</div><div class="tags">${all.map(a=>`<div class="chip glass ${f.am.includes(a)?"on":""}" onclick="tgl('${a}',this)">${AL[a]}</div>`).join("")}</div>
+<div class="sh2">Country</div><div class="chips">${cos.map(c=>`<div class="chip glass ${f.co==c?"on":""}" onclick="S.f.co='${c}';one(this);fc()">${c}</div>`).join("")}</div>
+<div class="sh2">Sort by</div><div class="chips">${Object.entries(SN).map(([k,v])=>`<div class="chip glass ${S.sort==k?"on":""}" onclick="S.sort='${k}';one(this)">${v}</div>`).join("")}</div>
+<button class="btn" style="margin-top:14px" onclick="closeSheet();apply()">Show <span id="fcn">${fx().length}</span> stays</button>`;$("#ov").classList.add("on")}
+function surprise(){const l=fx();if(!l.length)return toast("No stays to pick from");const pf=[...S.saved].map(i=>(H.find(h=>h.id==i)||{}).cat),p=l.filter(h=>pf.includes(h.cat)&&!S.saved.has(h.id)),pool=p.length?p:l;open_(pool[Math.floor(Math.random()*pool.length)].id);toast("Surprise pick")}
+function cmpToggle(id){const i=S.cmp.indexOf(id);if(i>=0)S.cmp.splice(i,1);else if(S.cmp.length>=3)return toast("Compare up to 3 stays");else S.cmp.push(id);cmpb();open_(id,1)}
+function cmpb(){const b=$("#cmpb"),n=S.cmp.length;b.textContent="Compare "+n+"/3";b.classList.toggle("on",n>0)}
+function cmpSheet(){if(S.cmp.length<2)return toast("Add one more stay to compare");const L=S.cmp.map(i=>H.find(h=>h.id==i)),A=[...new Set(L.flatMap(h=>h.a))],n=L.length,R=[["Price",h=>fmt(h.p)],["Rating",h=>h.r||"New"],["Reviews",h=>h.k],["City",h=>h.c],["Distance",h=>dkm(h)+" km"],...A.map(a=>[AL[a],h=>h.a.includes(a)?"✓":"–"])];
+$("#bs").innerHTML=`<div class="row sp"><h3>Compare stays</h3><span class="m" style="cursor:pointer" onclick="S.cmp=[];cmpb();closeSheet()">Clear</span></div><div style="display:grid;grid-template-columns:78px repeat(${n},1fr);gap:8px;margin-top:12px;font-size:12px;align-items:center"><span></span>${L.map(h=>`<div style="text-align:center"><div class="th" style="width:56px;height:56px;margin:0 auto 4px">${art(h)}</div><b>${h.n}</b></div>`).join("")}${R.map(r=>`<span class="m">${r[0]}</span>${L.map(h=>`<span style="text-align:center">${r[1](h)}</span>`).join("")}`).join("")}</div>`;$("#ov").classList.add("on")}
+function gs(e){const x=$("#gcn");if(x)x.textContent=Math.round(e.scrollLeft/e.clientWidth)+1+"/5"}
+function vs(e){$("#vn").textContent=Math.round(e.scrollLeft/e.clientWidth)+1+"/5"}
+function viewer(id,i){const h=H.find(x=>x.id==id);$("#vw").innerHTML=`<div class="row sp" style="position:absolute;top:calc(14px + env(safe-area-inset-top,0px));left:14px;right:14px;z-index:2"><div class="ib" onclick="$('#vw').classList.remove('on')" style="color:#fff">×</div><span class="pill glass" id="vn" style="position:static;color:#fff">${i+1}/5</span></div><div class="gal" onscroll="vs(this)">${[0,1,2,3,4].map(k=>`<div class="gs">${art(h,k)}</div>`).join("")}</div>`;$("#vw").classList.add("on");const g=$("#vw .gal");g.scrollLeft=i*g.clientWidth}
+function tb(dn,dr){S.tn=Math.max(1,S.tn+dn);S.tr=Math.max(1,S.tr+dr);$("#tn").textContent=S.tn;$("#tr").textContent=S.tr;const t=S.h.p*S.tn*S.tr;$("#tt").textContent=fmt(t)+(S.cur!="BWP"?" (P"+t.toLocaleString()+")":"")}
+function setFont(k){S.font=k;document.documentElement.style.setProperty("--font",FN[k].v);me()}
+function setOp(v){S.op=v;$("#app").style.setProperty("--info-op",v);$("#opv").textContent=Math.round(v*100)+"%"}
+const GR=["Free","Blues","Pinks & Reds","Purples","Greens","Warm","Neutral"];
+function themesPage(u){return `<p class="m" style="margin:0 4px">Three themes are free. Log in to unlock the rest.</p>`+GR.map(g=>{const e=Object.entries(T).filter(([k,t])=>t.free?g=="Free":t.g==g);if(!e.length)return"";return `<div class="sh2">${g}</div><div class="themes">${e.map(([k,t])=>{const lk=!t.free&&!u;return `<div class="tc glass ${k==S.theme?"on":""}" data-k="${k}" onclick="pick('${k}',event)">${cc(t)}<b style="font-size:13px">${t.name}</b><div class="m">${t.free?"Free":lk?"Log in to unlock":"Unlocked"}</div>${lk?`<span class="lk">${ic("lock","width:16px;height:16px")}</span>`:""}</div>`}).join("")}</div>`}).join("")}
+function displayPage(){return `<div class="sh">Typeface</div><div class="grp glass">${Object.entries(FN).map(([k,x])=>`<div class="st" onclick="setFont('${k}')"><span style="font-family:${x.v}">${x.n}</span><span class="v">${k==S.font?ic("chk","color:var(--acc);stroke-width:3"):""}</span></div>`).join("")}</div><div class="sh">Spotlight description panel</div><div class="grp glass"><div class="st" style="cursor:default;flex-direction:column;align-items:stretch"><div class="row sp"><span>Opacity</span><b id="opv">${Math.round(S.op*100)}%</b></div><input type="range" class="rg" min="20" max="95" value="${S.op*100}" oninput="setOp(this.value/100)"></div></div>`}
+/* ---- GOOGLE MAPS (optional; pass ?mapsKey=YOUR_KEY, never commit the key) ---- */
+const MAPS_KEY=new URLSearchParams(location.search).get("mapsKey")||"";
+function loadGoogle(){if(!MAPS_KEY)return;window.gmReady=()=>{S.gm=true;map()};const e=document.createElement("script");e.src="https://maps.googleapis.com/maps/api/js?key="+encodeURIComponent(MAPS_KEY)+"&callback=gmReady";e.async=1;e.onerror=()=>{S.gm=false};document.head.appendChild(e)}
+function gmap(){const el=$("#p-map"),first=!el.querySelector("#gm"),sel=H.find(h=>h.id==S.sel);
+if(first){el.innerHTML=`<div class="mh row sp"><div><h1>Map</h1><div class="m" id="gmc"></div></div><div class="row"><div class="ib" onclick="resetMap()">${ic("fit")}</div><div class="ib" onclick="detect()">${ic("tg")}</div></div></div><div id="gm" style="position:absolute;left:0;right:0;top:90px;bottom:0"></div><div id="gcard"></div>`;S.G=new google.maps.Map($("#gm"),{center:{lat:-22,lng:24.5},zoom:5,disableDefaultUI:true})}
+const l=fx();$("#gmc").textContent=l.length+" stays · tap a price";(S.mk||[]).forEach(m=>m.setMap(null));
+S.mk=l.map(h=>{const m=new google.maps.Marker({position:{lat:h.la,lng:h.lo},map:S.G,label:{text:fmt(h.p),fontSize:"11px",fontWeight:"700"}});m.addListener("click",()=>zoomTo(h.id,200,1));return m});
+$("#gcard").innerHTML=sel?`<div class="mc glass row" onclick="open_(${sel.id})"><div class="th">${art(sel)}</div><div style="flex:1;min-width:0"><b style="font-size:14px">${sel.n}</b><div class="m">${sel.c}, ${sel.co}</div>${stars(sel)}</div><div class="pr">${fmt(sel.p)}</div></div>`:""}
+/* ---- DETAIL ---- */
+const REV=[["Naledi M.",5,"Quiet, spotless and the garden is lovely.","9 days ago"],["Tumelo K.",4,"Good value. Breakfast could be earlier.","3 weeks ago"],["Kabo S.",5,"Would happily stay again.","1 month ago"]];
+const revLock=()=>`<div class="glass li" style="cursor:default;text-align:center;padding:22px;margin-top:8px"><div class="lockfx">${ic("lock","width:28px;height:28px")}</div><h3 style="margin:10px 0 4px">Comments are for members</h3><p class="m">Log in to read comments and rate this stay.</p><button class="btn" style="margin-top:12px" onclick="$('#login').classList.remove('off')">Log in</button></div>`;
+function revHTML(h){const all=[...(S.rev[h.id]||[]),...(h.k?REV:[])];
+return `<div class="glass li" style="cursor:default;margin-top:8px"><b>Rate this stay</b><div class="rate">${[1,2,3,4,5].map(i=>`<span class="rs ${i<=S.rt?"on":""}" onclick="rate(${i})">★</span>`).join("")}</div><textarea class="inp" id="rc" rows="2" placeholder="Share your experience" style="margin-top:0"></textarea><button class="btn" style="margin-top:10px" onclick="submitRev()">Post review</button></div>`+(all.length?all.map(r=>`<div class="rv glass"><div class="row sp"><b>${r[0]}</b><span class="m">${r[3]}</span></div><div class="star" style="margin:3px 0">${"★".repeat(r[1])}</div>${r[2]}</div>`).join(""):'<div class="rv glass m">No comments yet. Be the first.</div>')}
+function rate(i){S.rt=i;document.querySelectorAll(".rs").forEach((e,j)=>e.classList.toggle("on",j<i))}
+function submitRev(){const t=$("#rc").value.trim(),h=S.h;if(!S.rt)return toast("Tap a star to rate");if(!t)return toast("Write a short comment");(S.rev[h.id]=S.rev[h.id]||[]).unshift([S.prof.name,S.rt,t,"Just now"]);h.r=Math.round((h.r*h.k+S.rt)/(h.k+1)*10)/10;h.k++;S.rt=0;toast("Thanks for your review ✓");render()}
+function commentsOf(id){if(!S.user)return gate("Log in to read comments and rate stays.");open_(id)}
+function open_(id,keep){const h=H.find(x=>x.id==id);S.h=h;if(!keep)S.recent=[id,...S.recent.filter(x=>x!=id)].slice(0,6);
+const bars=[Math.round((h.r-2)*30),Math.round(34-(h.r-3)*8),10,4,2].map(w=>Math.max(0,Math.min(100,w))),inC=S.cmp.includes(id),sim=H.filter(x=>x.cat==h.cat&&x.id!=h.id).slice(0,4);
+$("#det").innerHTML=`<div class="hero"><div class="gal" onscroll="gs(this)">${[0,1,2,3,4].map(i=>`<div class="gs" onclick="viewer(${h.id},${i})">${art(h,i)}</div>`).join("")}</div>
+<div class="row sp" style="position:absolute;top:calc(14px + env(safe-area-inset-top,0px));left:14px;right:14px"><div class="ib" onclick="closeDet()">${ic("back")}</div><div class="ib" onclick="fav(${h.id})">${ic("bm","fill:"+(S.saved.has(h.id)?"currentColor":"none"))}</div></div>
+<div class="pill glass" style="right:14px;bottom:40px">${ic("cam","width:13px;height:13px")}<span id="gcn">1/5</span></div></div>
+<div class="sheet"><h1 style="font-size:23px">${h.n}</h1>
+<div class="row sp" style="margin:8px 0 14px"><div class="pr" style="font-size:22px">${fmt(h.p)}<span class="m" style="font-weight:400"> /night</span></div>
+<div class="row"><span class="pill glass" style="position:static">${ic("pin","width:13px;height:13px")}${h.c}</span><span class="pill glass" style="position:static"><span class="star">★</span>${h.r||"New"}</span></div></div>
+<div class="am" style="grid-template-columns:repeat(3,1fr);margin-top:0"><div class="glass">${ic("moon")}<b>Check-in</b>2:00 PM</div><div class="glass">${ic("moon")}<b>Check-out</b>10:00 AM</div><div class="glass">${ic("pin")}<b>Distance</b>${dkm(h)} km</div></div>
+<h3>About</h3><p class="m" style="line-height:1.6;font-size:13px;margin:6px 0 16px">${h.d} Free cancellation up to 48 hours before check-in.</p>
+<h3>Amenities</h3><div class="am">${h.a.map(a=>`<div class="glass">${ic(a)}${AL[a]}</div>`).join("")||'<span class="m">None listed</span>'}</div>
+<h3>Trip budget</h3><div class="glass li" style="cursor:default;margin-top:8px"><div class="row sp"><div class="row">${ic("moon")}<b>Nights</b></div><div class="row"><div class="ib sm" onclick="tb(-1,0)">−</div><b id="tn" style="min-width:18px;text-align:center">${S.tn}</b><div class="ib sm" onclick="tb(1,0)">+</div></div></div>
+<div class="row sp" style="margin-top:10px"><div class="row">${ic("home")}<b>Rooms</b></div><div class="row"><div class="ib sm" onclick="tb(0,-1)">−</div><b id="tr" style="min-width:18px;text-align:center">${S.tr}</b><div class="ib sm" onclick="tb(0,1)">+</div></div></div>
+<div class="row sp" style="margin-top:12px"><span class="m">Estimated total</span><b id="tt" style="font-size:19px"></b></div></div>
+<h3 style="margin-top:16px">Location</h3><div class="glass li" style="cursor:default;margin-top:8px"><div class="row">${ic("pin")}<div><b>${h.c}, ${h.co}</b><div class="m">${h.la.toFixed(3)}, ${h.lo.toFixed(3)} · ${dkm(h)} km ${S.me?"from you":"from Gaborone"}</div></div></div><button class="btn" style="margin-top:12px;display:flex;gap:8px;align-items:center;justify-content:center" onclick="showOnMap(${h.id})">${ic("map")}View on map</button></div>
+<div class="glass li row sp" style="cursor:default"><div class="row">${ic("call")}<div><b>Contact host</b><div class="m">+267 7${h.id%10} 234 56${h.id%10}</div></div></div><div class="chip glass on" onclick="toast('Calling… (demo)')">Call</div></div>
+<div class="row sp" style="margin-top:6px"><h3>Ratings & reviews</h3>${stars(h)}</div><div style="margin-top:8px">${bars.map((w,i)=>`<div class="bar2"><span>${5-i}</span><i><u style="width:${w}%"></u></i></div>`).join("")}</div>
+<h3 style="margin-top:16px">Comments</h3>${S.user?revHTML(h):revLock()}
+<div class="row sp" style="margin-top:18px"><h3>Photos</h3>${ic("cam")}</div><div class="ph">${[0,1,2,3,4].map(i=>`<div onclick="viewer(${h.id},${i})">${art(h,i)}</div>`).join("")}</div>
+${sim.length?`<h3 style="margin-top:18px">Similar stays</h3><div class="hs">${sim.map(mini).join("")}</div>`:""}</div>
+<div class="bar glass"><div class="ib" onclick="share()">${ic("share")}</div><div class="ib" onclick="showOnMap(${h.id})">${ic("map")}</div><div class="ib" onclick="cmpToggle(${h.id})" style="${inC?"background:var(--acc);color:var(--atx)":""}">${ic("cmp")}</div><button class="btn" onclick="book()">Book Now</button></div>`;
+if(!keep)$("#det").scrollTop=0;$("#det").classList.add("on");tb(0,0)}
+function closeDet(){$("#det").classList.remove("on")}
+function share(){toast("Link copied")}
+function book(){if(!S.user)return toast("Log in to book"),setTimeout(()=>$("#login").classList.remove("off"),700);S.n=2;bsheet()}
+function bsheet(){const h=S.h;$("#bs").innerHTML=`<h3>${h.n}</h3><div class="row sp" style="margin:16px 0"><div class="row">${ic("moon")}<b>Nights</b></div>
+<div class="row"><div class="ib" onclick="S.n=Math.max(1,S.n-1);bsheet()">−</div><b style="width:22px;text-align:center">${S.n}</b><div class="ib" onclick="S.n++;bsheet()">+</div></div></div>
+<div class="row sp" style="margin-bottom:16px">${ic("card")}<b>Total  ${fmt(h.p*S.n)}</b></div><button class="btn" onclick="confirmBook()">Confirm booking</button>`;$("#ov").classList.add("on")}
+function confirmBook(){$("#ov").classList.remove("on");toast("Booked! Check your email ✓")}
+$("#ov").onclick=e=>{if(e.target.id=="ov")$("#ov").classList.remove("on")};
+/* ---- SPOTLIGHT (TikTok-style, top rated) ---- */
+function spot(){$("#spot").innerHTML=[...H].sort((a,b)=>b.r-a.r).slice(0,5).map((h,i)=>`<div class="slide">${art(h,i)}
+<div class="pill glass" style="top:calc(18px + env(safe-area-inset-top,0px));left:16px;padding:8px 14px;font-size:13px">${ic("star","width:14px;height:14px;fill:#f5a623;stroke:#f5a623")}#${i+1} Top Rated</div>
+<div class="rail"><div onclick="fav(${h.id})"><div class="ib">${ic("bm","fill:"+(S.saved.has(h.id)?"currentColor":"none"))}</div>Save</div><div onclick="commentsOf(${h.id})"><div class="ib">${ic("chat")}</div>${h.k}</div><div onclick="share()"><div class="ib">${ic("share")}</div>Share</div><div onclick="showOnMap(${h.id})"><div class="ib">${ic("map")}</div>Map</div></div>
+<div class="info glass"><h3>${h.n}</h3><div class="row" style="margin:6px 0">${stars(h)}<span class="m">· ${h.c} · ${fmt(h.p)}/night</span></div><p class="m">${h.d}</p>
+<div class="tags">${h.a.map(a=>`<span class="tag glass">${ic(a)}${AL[a]}</span>`).join("")}</div><button class="btn" style="margin-top:12px;padding:11px" onclick="open_(${h.id})">View stay</button></div></div>`).join("")}
+function saved(){if(!S.user){$("#p-saved").innerHTML=`<h1 class="sheet-t" style="margin:8px 0 18px">Keep the places you love.</h1><div style="text-align:center;margin-top:28px"><div class="tile" style="margin:auto;width:110px;height:110px;border-radius:32px">${ic("bm","width:44px;height:44px")}</div><h3 style="margin:18px 0 6px;font-size:20px">Your favourites start here.</h3><p class="m" style="font-size:14px;margin-bottom:18px">Log in to save and access your favourite guesthouses.</p><button class="btn" onclick="authOpen(0)">Log In</button><button class="btn ghost" style="margin-top:10px" onclick="authOpen(1)">Sign Up</button><div class="link" onclick="go('home')">Continue Browsing</div></div><div class="note" style="margin-top:28px">${ic("inf","width:18px;height:18px")}<span>You can explore every guesthouse without an account. Save a collection when you're ready.</span></div>`;return}const l=H.filter(h=>S.saved.has(h.id));$("#p-saved").innerHTML=`<h1 style="margin:8px 0 14px">Saved</h1>`+(l.length?l.map(li).join(""):`<div class="glass li m">Tap the bookmark on a stay to save it.</div>`)}
+const ini=()=>S.user?(S.prof.name[0]||"D").toUpperCase():"?";
+const row=(i,bg,l,v,a)=>`<div class="st" onclick="${a}"><div class="si" style="background:${bg}">${ic(i)}</div><span>${l}</span><span class="v">${v}</span>${ic("chev","width:16px;height:16px;opacity:.4")}</div>`;
+function me(d){const u=S.user,P=S.prof;let b="";
+if(!S.sub){b=`<h1 style="margin:8px 0 16px">Settings</h1>
+<div class="grp glass"><div class="st" style="padding:14px" onclick="S.sub='account';me(1)"><div class="av" style="width:56px;height:56px;font-size:22px">${ini()}</div><div><b style="font-size:17px">${u?P.name:"Guest"}</b><div class="m">${u?"Personal info, contact":"Log in to manage your account"}</div></div><span class="v"></span>${ic("chev","width:16px;height:16px;opacity:.4")}</div></div>
+<div class="sh">Preferences</div><div class="grp glass">${row("pal","#8b5cf6","Themes",T[S.theme].name,"S.sub='themes';me(1)")}${row("coin","#22c55e","Currency",S.cur,"S.sub='currency';me(1)")}${row("fnt","#f59e0b","Display",FN[S.font].n,"S.sub='display';me(1)")}</div>
+<div class="sh">General</div><div class="grp glass"><div class="st" style="cursor:default"><div class="si" style="background:#ef4444">${ic("bell")}</div><span>Notifications</span><span class="v"><div class="tg on" onclick="this.classList.toggle('on')"></div></span></div>${row("glb","#3b82f6","Language","English","toast('Demo: English only')")}${row("inf","#64748b","About","v1.0","toast('Mi Casa Es Su Casa · demo')")}</div>
+<div class="grp glass"><div class="st" style="justify-content:center;font-weight:600;color:${u?"#e5484d":"var(--tx)"}" onclick="${u?"logout()":"$('#login').classList.remove('off')"}">${u?"Log out":"Log in"}</div></div>`}
+else{const t={account:"Account",themes:"Themes",currency:"Currency",display:"Display"}[S.sub];
+b=`<div class="nh"><div class="row" style="cursor:pointer;color:var(--acc)" onclick="S.sub=null;me(2)">${ic("back")}<span>Settings</span></div><b style="text-align:center;font-size:17px">${t}</b><span></span></div>`;
+if(S.sub=="account")b+=!u?`<div class="glass li m" style="cursor:default">Log in to edit your personal info.</div><button class="btn" onclick="$('#login').classList.remove('off')">Log in</button>`:
+`<div style="text-align:center;margin-bottom:8px"><div class="av" style="width:84px;height:84px;font-size:32px;margin:0 auto 8px">${ini()}</div><div class="m">Edit your details below</div></div>
+${[["name","Full name"],["email","Email"],["phone","Phone"],["city","City"]].map(([k,l])=>`<div class="m" style="margin:10px 4px 0">${l}</div><input class="inp" style="margin-top:4px" id="f-${k}" value="${P[k]}">`).join("")}<button class="btn" style="margin-top:18px" onclick="saveProf()">Save changes</button>`;
+else if(S.sub=="themes")b+=themesPage(u);
+else if(S.sub=="display")b+=displayPage();else b+=`<div class="grp glass"><div class="st" style="cursor:default">${ic("tg")}<div><b>Detect my location</b><div class="m">Sets the currency for where you are</div></div><span class="v"><div class="chip glass on" onclick="detect()">Detect</div></span></div></div>
+<div class="grp glass">${Object.entries(CUR).map(([k,c])=>`<div class="st" onclick="setCur('${k}')"><div class="si" style="background:var(--acc);color:var(--atx);font-weight:700">${c.s}</div><div><b>${k}</b><div class="m">${c.n}</div></div><span class="v">${k==S.cur?ic("chk","color:var(--acc);stroke-width:3"):""}</span></div>`).join("")}</div>
+<p class="m" style="line-height:1.5;padding:0 6px">Prices are saved in BWP and converted for display. Rates are demo values.</p>`}
+const pn=$("#p-me .pn");if(d||!pn)$("#p-me").innerHTML=`<div class="pn ${d==1?"push":d==2?"pop":""}">${b}</div>`;else pn.innerHTML=b}
+function saveProf(){["name","email","phone","city"].forEach(k=>S.prof[k]=$("#f-"+k).value.trim()||S.prof[k]);toast("Saved ✓");render()}
+/* ---- CURRENCY + GEO ---- */
+function setCur(k,m){S.cur=k;if(m)toast(m);render()}
+function byGeo(a,o){return a<-17.7&&a>-27&&o>20&&o<29.4?"BWP":a<-22&&o>16&&o<33?"ZAR":a>49.8&&a<60&&o>-8&&o<2?"GBP":a>35&&a<71&&o>-10&&o<30?"EUR":"USD"}
+function detect(){if(!navigator.geolocation)return tz(1);navigator.geolocation.getCurrentPosition(p=>{S.me=[p.coords.latitude,p.coords.longitude];setCur(byGeo(...S.me),"Location found · currency set")},()=>tz(1),{timeout:6000})}
+function tz(loud){const z=Intl.DateTimeFormat().resolvedOptions().timeZone||"",k=/Gaborone/.test(z)?"BWP":/Johannesburg/.test(z)?"ZAR":/London/.test(z)?"GBP":/^Europe/.test(z)?"EUR":/Africa/.test(z)?"BWP":"USD";
+if(z.includes("/"))S.place=z.split("/")[1].replace("_"," ");S.cur=k;if(loud)toast("Location blocked · used timezone ("+k+")");render()}
+/* ---- MAP ZOOM ---- */
+function setVB(v){S.vb=v;const sv=document.querySelector("#p-map svg");if(!sv)return;sv.setAttribute("viewBox",`${v.x} ${v.y} ${v.w} ${v.w*360/420}`);sv.querySelectorAll(".pn2").forEach(g=>g.setAttribute("transform",`translate(${g.dataset.x},${g.dataset.y}) scale(${v.w/420})`))}
+function tween(to){const a={...S.vb},t0=performance.now();cancelAnimationFrame(S.raf);const st=t=>{const k=Math.min(1,(t-t0)/800),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;setVB({x:a.x+(to.x-a.x)*e,y:a.y+(to.y-a.y)*e,w:a.w+(to.w-a.w)*e});if(k<1)S.raf=requestAnimationFrame(st)};S.raf=requestAnimationFrame(st)}
+function zoomTo(id,w,sel){const h=H.find(x=>x.id==id);if(sel){S.sel=id;map()}if(S.lf&&S.L){S.L.flyTo([h.la,h.lo],w<170?12:9);return}if(S.gm&&S.G){S.G.panTo({lat:h.la,lng:h.lo});S.G.setZoom(w<170?12:9);return}const hh=w*360/420;tween({x:(h.lo-18)*30-w/2,y:(-16-h.la)*30-hh/2+hh*.12,w})}
+function resetMap(){S.sel=null;map();if(S.lf&&S.L){S.L.flyTo([-22,24.5],5);return}if(S.gm&&S.G){S.G.setZoom(5);S.G.panTo({lat:-22,lng:24.5});return}tween({x:0,y:0,w:420})}
+function showOnMap(id){S.sel=id;map();closeDet();setTimeout(()=>{go("map");setTimeout(()=>zoomTo(id,140),450)},250)}
+/* ---- MAP (stylised, no tiles needed offline) ---- */
+function map(){if(S.gm)return gmap();if(S.lf)return lmap();const X=g=>(g-18)*30,Y=a=>(-16-a)*30,sel=H.find(h=>h.id==S.sel),
+bw=[[20,-24.8],[20,-22],[21,-22],[21,-18.1],[23.3,-18],[25.3,-17.8],[26,-18.1],[27,-20],[29.4,-22.1],[28,-22.6],[27,-23.6],[26,-24.7],[25.5,-25.7],[23,-25.3],[22,-26.9],[20.7,-26.8]].map(p=>X(p[0])+","+Y(p[1])).join(" "),
+grid=[...Array(15)].map((_,i)=>`<path d="M${i*30} 0V360" />`).join("")+[...Array(13)].map((_,i)=>`<path d="M0 ${i*30}H420" />`).join(""),
+you=S.me&&S.me[1]>18&&S.me[1]<32&&S.me[0]<-16&&S.me[0]>-28?`<circle class="pulse" cx="${X(S.me[1])}" cy="${Y(S.me[0])}" r="8"/><circle cx="${X(S.me[1])}" cy="${Y(S.me[0])}" r="5" fill="#3b82f6" stroke="#fff" stroke-width="2"/>`:"";
+$("#p-map").innerHTML=`<div class="mh row sp"><div><h1>Map</h1><div class="m">${fx().length} stays · tap a price</div></div><div class="row"><div class="ib" onclick="resetMap()">${ic("fit")}</div><div class="ib" onclick="detect()">${ic("tg")}</div></div></div>
+<svg class="mp" viewBox="${S.vb.x} ${S.vb.y} ${S.vb.w} ${S.vb.w*360/420}"><g stroke="var(--gb)" stroke-width=".6" opacity=".5" fill="none">${grid}</g>
+<polygon points="${bw}" fill="var(--bg3)" fill-opacity=".55" stroke="var(--acc)" stroke-width="1.5" stroke-linejoin="round"/>
+<text x="150" y="215" fill="var(--tx2)" font-size="13" letter-spacing="4">BOTSWANA</text>${you}
+${fx().map(h=>`<g class="pn2 ${h.id==S.sel?"on":""}" data-x="${X(h.lo)}" data-y="${Y(h.la)}" transform="translate(${X(h.lo)},${Y(h.la)}) scale(${S.vb.w/420})" onclick="zoomTo(${h.id},200,1)"><rect x="-27" y="-30" width="54" height="20" rx="10"/><text y="-16">${fmt(h.p)}</text><circle r="4"/></g>`).join("")}</svg>
+${sel?`<div class="mc glass row" onclick="open_(${sel.id})"><div class="th">${art(sel)}</div><div style="flex:1;min-width:0"><b style="font-size:14px">${sel.n}</b><div class="m">${sel.c}, ${sel.co}</div>${stars(sel)}</div><div class="pr">${fmt(sel.p)}</div></div>`:""}`}
+/* ---- ACTIONS ---- */
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("on"),2000)}
+function fav(id){if(!S.user)return gate();S.saved.has(id)?S.saved.delete(id):S.saved.add(id);render();document.body.classList.add("bmp");setTimeout(()=>document.body.classList.remove("bmp"),600)}
+function pick(k,ev){if(!T[k].free&&!S.user){toast("Log in to unlock themes");return setTimeout(()=>$("#login").classList.remove("off"),700)}
+if(k==S.theme)return;const a=$("#app"),b=a.getBoundingClientRect(),r=document.createElement("div");r.className="rip";r.style.cssText=`left:${(ev?ev.clientX:b.width/2)-b.left}px;top:${(ev?ev.clientY:b.height/2)-b.top}px;background:${T[k].c[1]}`;a.appendChild(r);r.addEventListener("animationend",()=>r.remove());
+setTimeout(()=>applyTheme(k),260);document.querySelectorAll(".tc").forEach(e=>e.classList.toggle("on",e.dataset.k==k));const el=document.querySelector(`.tc[data-k="${k}"]`);if(el){el.classList.add("pop");setTimeout(()=>el.classList.remove("pop"),520)}}
+const score=p=>(p.length>=8)+(/[a-z]/.test(p)&&/[A-Z]/.test(p))+/\d/.test(p)+/[^\w\s]/.test(p);
+function strength(){const n=score($("#pw").value);document.querySelectorAll("#str i").forEach((e,i)=>e.classList.toggle("on",i<n))}
+function authMode(){S.signup=!S.signup;$("#nm").style.display=$("#str").style.display=$("#pw2").style.display=S.signup?"block":"none";$("#tm").style.display=S.signup?"block":"none";$("#lb").textContent=S.signup?"Create account":"Sign In";$("#sw").textContent=S.signup?"Have an account? Sign in":"Create account";strength()}
+function login(s){const em=$("#em").value.trim(),pw=$("#pw").value,er=$("#er");
+if(S.signup){const n=$("#nm").value.trim();if(!n||!/^\S+@\S+\.\S+$/.test(em))return er.textContent="Enter your name and a valid email";if(score(pw)<2)return er.textContent="Choose a stronger password";if($("#pw2").value!==pw)return er.textContent="Passwords do not match";S.prof={name:n,email:em,phone:"",city:""};S.user=em}
+else if(s||(em=="demo@micasa.app"&&pw=="password123"))S.user="demo@micasa.app";else return er.textContent="Wrong email or password";
+er.textContent="";$("#login").classList.add("off");render();toast("Welcome 👋")}
+function guest(){$("#login").classList.add("off")}
+function logout(){S.user=null;S.saved.clear();if(!T[S.theme].free)applyTheme("cream");render()}
+/* ---- NAV (hover tooltips + smooth page slide) ---- */
+const N=[["home","home","Explore"],["map","map","Map"],["spot","star","Spotlight"],["saved","bm","Saved"],["me","user","Profile"]];
+const idOf=k=>k=="spot"?"spot":"p-"+k;
+function nav(){const n=$("#nav");if(!n.firstChild)n.innerHTML='<div class="ind"></div>'+N.map(([k,i,l])=>`<button onclick="go('${k}')">${ic(i)}<span class="tip">${l}</span></button>`).join("");
+const x=N.findIndex(v=>v[0]==S.page);n.querySelectorAll("button").forEach((b,i)=>b.classList.toggle("on",i==x));n.querySelector(".ind").style.transform=`translateX(${x*60}px)`}
+function go(k){closeDet();const o=N.findIndex(n=>n[0]==S.page),n=N.findIndex(n=>n[0]==k);if(o==n)return;
+const f=$("#"+idOf(S.page)),t=$("#"+idOf(k));f.classList.remove("on");f.classList.toggle("left",n>o);
+t.style.transition="none";t.classList.toggle("left",n<o);t.offsetHeight;t.style.transition="";t.classList.remove("left");t.classList.add("on","enter");setTimeout(()=>t.classList.remove("enter"),700);S.page=k;nav()}
+function render(){cmpb();home();map();spot();saved();me();nav();if($("#det").classList.contains("on"))open_(S.h.id,1)}
+
+/* ===== v7 additions ===== */
+const MN=["January","February","March","April","May","June","July","August","September","October","November","December"];
+/* Map: Leaflet + OpenStreetMap needs no key. Pass ?mapsKey=YOUR_KEY to use Google Maps instead. */
+function loadMap(){if(MAPS_KEY)return loadGoogle();
+const c=document.createElement("link");c.rel="stylesheet";c.href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css";document.head.appendChild(c);
+const e=document.createElement("script");e.src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js";e.onload=()=>{S.lf=true;map()};e.onerror=()=>{S.lf=false};document.head.appendChild(e)}
+function lmap(){const el=$("#p-map"),first=!el.querySelector("#lm"),sel=H.find(h=>h.id==S.sel);
+if(first){el.innerHTML=`<div class="mh row sp"><div><h1>Map</h1><div class="m" id="gmc"></div></div><div class="row"><div class="ib" onclick="resetMap()">${ic("fit")}</div><div class="ib" onclick="detect()">${ic("tg")}</div></div></div><div id="lm" style="position:absolute;left:0;right:0;top:90px;bottom:0"></div><div id="gcard"></div>`;
+S.L=L.map("lm",{zoomControl:false}).setView([-22,24.5],5);L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:"© OpenStreetMap"}).addTo(S.L);
+new ResizeObserver(()=>S.L.invalidateSize()).observe($("#lm"))}
+const l=fx();$("#gmc").textContent=l.length+" stays · tap a price";(S.lk||[]).forEach(m=>m.remove());
+S.lk=l.map(h=>L.marker([h.la,h.lo],{icon:L.divIcon({className:"",html:`<div class="pin">${fmt(h.p)}</div>`,iconSize:[0,0]})}).on("click",()=>zoomTo(h.id,200,1)).addTo(S.L));
+if(S.lu)S.lu.remove();if(S.me)S.lu=L.circleMarker(S.me,{radius:7,color:"#fff",weight:2,fillColor:"#3b82f6",fillOpacity:1}).addTo(S.L);
+$("#gcard").innerHTML=sel?`<div class="mc glass row" onclick="open_(${sel.id})"><div class="th">${art(sel)}</div><div style="flex:1;min-width:0"><b style="font-size:14px">${sel.n}</b><div class="m">${sel.c}, ${sel.co}</div>${stars(sel)}</div><div class="pr">${fmt(sel.p)}</div></div>`:""}
+/* Sheets from the Figma screens */
+function sheet(h){$("#bs").innerHTML=h;$("#ov").classList.add("on")}
+const tileHead=i=>`<div class="row sp"><div class="tile">${ic(i,"width:28px;height:28px")}</div><div class="ib" onclick="closeSheet()">✕</div></div>`;
+function gate(msg){sheet(tileHead("user")+`<h2 class="sheet-t" style="margin:14px 0 6px">Account Required</h2><p class="m" style="font-size:14px">${msg||"Sign in or create an account to save favourites and submit reviews."}</p><button class="btn" style="margin-top:16px" onclick="authOpen(0)">Log In</button><button class="btn ghost" style="margin-top:10px" onclick="authOpen(1)">Sign Up</button><div class="link" onclick="closeSheet()">Continue Browsing</div>`)}
+function authOpen(up){closeSheet();if(!!S.signup!=!!up)authMode();setTimeout(()=>$("#login").classList.remove("off"),250)}
+function forgot(){sheet(tileHead("chat")+`<h2 class="sheet-t" style="margin:14px 0 6px">Forgot your password?</h2><p class="m" style="font-size:14px">It happens. Let's help you get back to your favourite places.</p><input class="inp" id="fe" placeholder="Email address" value="${$("#em").value}"><p class="m" style="margin-top:10px">We'll send a password reset link to the email address associated with your account.</p><button class="btn" style="margin-top:14px" onclick="sendReset()">Send Reset Link</button><div class="link" onclick="closeSheet()">Back to Log In</div><div class="note">${ic("lock","width:18px;height:18px")}<span>For your security, reset links expire after 30 minutes. Your saved guesthouses will stay right where you left them.</span></div>`)}
+function sendReset(){const v=$("#fe").value.trim();if(!/^\S+@\S+\.\S+$/.test(v))return toast("Enter a valid email");closeSheet();toast("Reset link sent to "+v+" (demo)")}
+/* Date preference: discovery only, it never reserves anything */
+function dlab(){const f=d=>d.getDate()+" "+MN[d.getMonth()].slice(0,3);return S.dt.b?f(S.dt.a)+" – "+f(S.dt.b):f(S.dt.a)}
+function dates(m){const n0=new Date(),d=S.dm=m||S.dm||new Date(n0.getFullYear(),n0.getMonth(),1),y=d.getFullYear(),mo=d.getMonth(),n=new Date(y,mo+1,0).getDate(),off=(new Date(y,mo,1).getDay()+6)%7,t=S.dt||{},a=t.a&&+t.a,b=t.b&&+t.b;
+const cell=i=>{const v=+new Date(y,mo,i);return `<i class="${v==a||v==b?"e":a&&b&&v>a&&v<b?"in":""}" onclick="dpick(${v})">${i}</i>`};
+sheet(`<h2 class="sheet-t">When feels right?</h2><p class="m">Add an optional date preference to your search.</p><div class="row sp" style="margin:12px 0"><div class="ib" onclick="dates(new Date(${y},${mo-1},1))">‹</div><b>${MN[mo]} ${y}</b><div class="ib" onclick="dates(new Date(${y},${mo+1},1))">›</div></div><div class="cal">${["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(x=>`<b>${x}</b>`).join("")}${"<span></span>".repeat(off)}${[...Array(n)].map((_,i)=>cell(i+1)).join("")}</div><div class="row sp"><span class="m">Your date preference</span><b class="chip glass on" style="padding:6px 12px">${S.dt?dlab():"Any time"}</b></div><div class="note">${ic("inf","width:18px;height:18px")}<span>For discovery only. These dates don't reserve a room or confirm availability.</span></div><button class="btn" style="margin-top:14px" onclick="closeSheet();home()">Apply</button><button class="btn ghost" style="margin-top:10px" onclick="S.dt=null;closeSheet();home()">Clear</button>`)}
+function dpick(v){const t=S.dt;S.dt=!t||t.b||v<+t.a?{a:new Date(v)}:{a:t.a,b:new Date(v)};dates(S.dm)}
+applyTheme("cream");tz(0);loadMap();setTimeout(()=>{S.loading=false;lists()},900);addEventListener("offline",()=>$("#off").classList.add("on"));addEventListener("online",()=>$("#off").classList.remove("on"));if(!navigator.onLine)$("#off").classList.add("on");
+</script></body></html>

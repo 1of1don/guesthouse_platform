@@ -1,0 +1,23 @@
+{
+  "name": "micasa-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Admin API for Mi Casa Es Su Casa (Express + Firebase Admin SDK)",
+  "main": "index.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "test": "node --test \"test/*.test.js\"",
+    "seed": "node scripts/seed.js",
+    "create-superadmin": "node scripts/createSuperadmin.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "firebase-admin": "^14.5.0"
+  }
+}

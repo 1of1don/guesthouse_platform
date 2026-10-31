@@ -1,39 +1,48 @@
-//---Anyone can browse. Customers may only change the three rating totals (the mobile app does this
-//---when someone rates). Creating, editing and suspend guesthouses goes through the backend.     
+// Paste into Firebase console > Firestore Database > Rules > Publish.
+// The backend uses the Admin SDK, which IGNORES these rules. So these rules only describe what
+// the mobile app (signed-in customers) and the public may do directly.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
 
-match /guesthouses/{id} {                                                                        
-  allow read: if true;                                                                           
-  allow update: if signedIn() &&                                                                 
-    request.resource.data.diff(resource.data).affectedKeys()                                     
-      .hasOnly(['ratingSum', 'ratingCount', 'averageRating']);                                   
-  allow create, delete: if false;                                                                
-}                                                                                                
+    function signedIn() { return request.auth != null; }
 
-//---One review per customer per guesthouse. The id must be "<guesthouseId>_<customerUid>".        
-//---Deleting reviews (moderation) goes through the backend so the totals stay correct.            
+    // Anyone can browse. Customers may only change the three rating totals (the mobile app does this
+    // when someone rates). Creating, editing and deleting guesthouses goes through the backend.
+    match /guesthouses/{id} {
+      allow read: if true;
+      allow update: if signedIn() &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['ratingSum', 'ratingCount', 'averageRating']);
+      allow create, delete: if false;
+    }
 
-match /ratings/{ratingId} {                                                                      
-  allow read: if true;                                                                           
-  allow create, update: if signedIn()                                                            
-    && request.resource.data.customerId == request.auth.uid                                      
-    && ratingId == request.resource.data.guesthouseId + '_' + request.auth.uid                   
-    && request.resource.data.score is int                                                        
-    && request.resource.data.score >= 1 && request.resource.data.score <= 5;                     
-  allow delete: if false;                                                                        
-}                                                                                                
+    // One review per customer per guesthouse. The id must be "<guesthouseId>_<customerUid>".
+    // Nobody deletes reviews. Moderation suspends them through the backend so the totals stay correct.
+    match /ratings/{ratingId} {
+      allow read: if true;
+      allow create, update: if signedIn()
+        && (resource == null || resource.data.get('status', 'active') != 'suspended')
+        && !('status' in request.resource.data)
+        && request.resource.data.customerId == request.auth.uid
+        && ratingId == request.resource.data.guesthouseId + '_' + request.auth.uid
+        && request.resource.data.score is int
+        && request.resource.data.score >= 1 && request.resource.data.score <= 5;
+      allow delete: if false;
+    }
 
-//---A customer's own profile and favourites. Nobody else can read or write them.                  
+    // A customer's own profile and favourites. Nobody else can read or write them.
+    match /customers/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+      match /favourites/{guesthouseId} {
+        allow read, write: if signedIn() && request.auth.uid == uid;
+      }
+    }
 
-match /customers/{uid} {                                                                         
-  allow read, write: if signedIn() && request.auth.uid == uid;                                   
-  match /favourites/{guesthouseId} {                                                             
-    allow read, write: if signedIn() && request.auth.uid == uid;                                 
-  }                                                                                              
-}                                                                                                
-
-//---Staff records. A staff member may read their own record. Only the backend writes them.        
-
-match /admins/{uid} {                                                                            
-  allow read: if signedIn() && request.auth.uid == uid;                                          
-  allow write: if false;                                                                         
-}                                                                                                
+    // Staff records. A staff member may read their own record. Only the backend writes them.
+    match /admins/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+  }
+}
