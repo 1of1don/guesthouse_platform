@@ -9,6 +9,7 @@ import {
   MapPin,
   Plus,
   Sparkles,
+  Users,
 } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 
@@ -39,6 +40,11 @@ const navLinks = [
     to: '/admins',
     label: 'Admins',
     icon: ShieldCheck,
+  },
+  {
+    to: '/users',
+    label: 'User Management',
+    icon: Users,
   },
   {
     to: '/settings',

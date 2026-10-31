@@ -11,6 +11,7 @@ import AddEditGuesthouse from './pages/AddEditGuesthouse';
 import AdminUsers from './pages/AdminUsers';
 import Settings from './pages/Settings';
 import Assistant from './pages/Assistant';
+import UserManagement from './pages/UserManagement';
 
 function ProtectedRoute({ children }: { children: React.ReactElement }) {
   const { isAuthenticated, status, error } = useAuth();
@@ -77,6 +78,7 @@ export default function App() {
               <Route path="/admins" element={<AdminUsers />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/assistant" element={<Assistant />} />
+              <Route path="/users" element={<UserManagement />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

@@ -496,6 +496,32 @@ export const api = {
     return newAdmin;
   },
 
+  // REGULAR USER MANAGEMENT
+
+  // Fetches all standard users
+  getRegularUsers: async (): Promise<any[]> => {
+    if (isFirebaseConfigured && db) {
+      try {
+        // Assuming regular users are stored in a 'users' collection
+        const snapshot = await getDocs(collection(db, 'users'));
+        return snapshot.docs.map((item) => ({
+          id: item.id,
+          ...item.data(),
+        }));
+      } catch (err) {
+        console.warn('Firestore getRegularUsers failed:', err);
+      }
+    }
+    return []; // Return empty array if no DB or error
+  },
+
+  // Deletes a regular user
+  deleteRegularUser: async (id: string): Promise<void> => {
+    if (isFirebaseConfigured && db) {
+      await deleteDoc(doc(db, 'users', id));
+    }
+  },
+
  
   // Helper function to wipe browser cache and restore default guesthouses
  
