@@ -23,6 +23,7 @@ export interface Guesthouse {
   logo?: string;              // Firebase Storage download URL for the main photo
   gallery?: string[];         // Firebase Storage download URLs for gallery photos
   createdAt?: string;         // ISO date string of when this listing was created
+  isSuspended?: boolean;     // Missing means active; status supports older records.
   // ── NEW ──────────────────────────────────────────────────────────────────────
   status?: 'active' | 'suspended'; // Listing visibility: 'active' shows to guests,
                                    // 'suspended' hides from mobile app until reactivated

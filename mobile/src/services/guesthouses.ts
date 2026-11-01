@@ -1,7 +1,7 @@
 // Firestore implementation. Same exports as the old mock, so no screen changes.
 import {
   collection, deleteDoc, doc, DocumentData, getDoc, getDocs, query, runTransaction,
-  serverTimestamp, setDoc, where,
+  onSnapshot, serverTimestamp, setDoc, where,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Customer, Guesthouse, Review } from '../types';
@@ -22,6 +22,7 @@ function toGuesthouse(id: string, d: DocumentData): Guesthouse {
   const count = num(d.ratingCount);
   return {
     id,
+    isSuspended: typeof d.isSuspended === 'boolean' ? d.isSuspended : d.status === 'suspended',
     name: d.name ?? 'Unnamed guesthouse',
     logoUrl: d.logoUrl ?? '',
     galleryUrls: list(d.galleryUrls),
@@ -41,12 +42,29 @@ function toGuesthouse(id: string, d: DocumentData): Guesthouse {
 
 export async function listGuesthouses(): Promise<Guesthouse[]> {
   const snap = await getDocs(collection(db, 'guesthouses'));
-  return snap.docs.map((d) => toGuesthouse(d.id, d.data()));
+  // Filter after reading so legacy listings without the field remain visible.
+  return snap.docs.map((d) => toGuesthouse(d.id, d.data())).filter((g) => !g.isSuspended);
 }
 
 export async function getGuesthouse(id: string): Promise<Guesthouse | null> {
   const snap = await getDoc(doc(db, 'guesthouses', id));
-  return snap.exists() ? toGuesthouse(snap.id, snap.data()) : null;
+  if (!snap.exists()) return null;
+  const guesthouse = toGuesthouse(snap.id, snap.data());
+  return guesthouse.isSuspended ? null : guesthouse;
+}
+
+// Keep open Explore/Saved screens in sync with admin suspension changes.
+export function watchGuesthouses(onChange: (items: Guesthouse[]) => void, onError: (error: Error) => void) {
+  return onSnapshot(collection(db, 'guesthouses'), (snap) => {
+    onChange(snap.docs.map((d) => toGuesthouse(d.id, d.data())).filter((g) => !g.isSuspended));
+  }, onError);
+}
+
+export function watchGuesthouse(id: string, onChange: (item: Guesthouse | null) => void, onError: (error: Error) => void) {
+  return onSnapshot(doc(db, 'guesthouses', id), (snap) => {
+    const item = snap.exists() ? toGuesthouse(snap.id, snap.data()) : null;
+    onChange(item && !item.isSuspended ? item : null);
+  }, onError);
 }
 
 const toReview = (id: string, d: DocumentData): Review => ({

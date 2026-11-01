@@ -1,10 +1,10 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GuesthouseCard } from '../../components/GuesthouseCard';
 import { useAuth } from '../../context/AuthContext';
-import { listGuesthouses } from '../../services/guesthouses';
+import { watchGuesthouses } from '../../services/guesthouses';
 import { colors, radius } from '../../theme';
 import { Guesthouse } from '../../types';
 
@@ -14,10 +14,13 @@ export default function Saved() {
   const [all, setAll] = useState<Guesthouse[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async () => {
-    try { setAll(await listGuesthouses()); } finally { setLoading(false); }
-  }, []);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => watchGuesthouses((data) => {
+    setAll(data);
+    setLoading(false);
+  }, () => {
+    setAll([]);
+    setLoading(false);
+  }), []);
 
   const saved = all.filter((g) => favouriteIds.includes(g.id));
 

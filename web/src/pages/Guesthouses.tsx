@@ -101,7 +101,7 @@ export default function Guesthouses() {
       setItems((prev) =>
         prev.map((g) =>
           g._id === id
-            ? { ...g, status: willSuspend ? 'suspended' : 'active' }
+            ? { ...g, isSuspended: willSuspend, status: willSuspend ? 'suspended' : 'active' }
             : g,
         ),
       );

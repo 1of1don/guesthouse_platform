@@ -1,6 +1,7 @@
 // Field names must match what the web admin portal writes to Firestore.
 export type Guesthouse = {
   id: string;
+  isSuspended?: boolean;
   name: string;
   logoUrl: string;
   galleryUrls: string[];
