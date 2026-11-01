@@ -15,9 +15,40 @@ import {
 } from 'lucide-react';
 import PropertyCard from '../components/ui/PropertyCard';
 import PropertyDetailModal from '../components/ui/PropertyDetailModal';
+import ConfirmModal from '../components/ui/ConfirmModal';
+import GuesthouseSkeletonGrid from '../components/ui/GuesthouseSkeleton';
+import { useToast } from '../components/ui/Toast';
 import { api } from '../services/api';
 import { useSettings } from '../context/SettingsContext';
 import type { Guesthouse } from '../types';
+
+// ---------------------------------------------------------------------------
+// Wording for the remove action.
+// TODAY the app permanently DELETES guesthouses. When the suspend feature is
+// built, replace this object with the SUSPEND version below and change the
+// api call inside confirmRemove().
+//
+// const REMOVE = {
+//   title: 'Suspend guesthouse?',
+//   message: 'The guesthouse will be hidden from users until you reactivate it.',
+//   confirm: 'Suspend',
+//   loading: 'Suspending...',
+//   done: 'Guesthouse suspended',
+//   failed: "Couldn't suspend guesthouse. Try again.",
+//   variant: 'accent' as const,
+//   icon: undefined,   // undefined = pause icon
+// };
+// ---------------------------------------------------------------------------
+const REMOVE = {
+  title: 'Delete guesthouse?',
+  message: "This permanently removes the guesthouse and its photos. This action can't be undone.",
+  confirm: 'Delete',
+  loading: 'Deleting...',
+  done: 'Guesthouse deleted',
+  failed: "Couldn't delete guesthouse. Try again.",
+  variant: 'danger' as const,
+  icon: <Trash2 className="w-5 h-5" />,
+};
 
 export default function Guesthouses() {
   const { formatPrice, currency } = useSettings();
@@ -31,6 +62,8 @@ export default function Guesthouses() {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [previewProperty, setPreviewProperty] = useState<Guesthouse | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingRemove, setPendingRemove] = useState<Guesthouse | null>(null);
+  const { showToast } = useToast();
 
   const loadData = () => {
     setLoading(true);
@@ -51,18 +84,22 @@ export default function Guesthouses() {
     loadData();
   }, []);
 
-  const handleDelete = async (id: string, name: string) => {
-    if (deletingId) return;
-    if (confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
-      try {
-        setDeletingId(id);
-        await api.deleteGuesthouse(id);
-        setItems((prev) => prev.filter((item) => item._id !== id));
-      } catch (cause) {
-        alert(cause instanceof Error ? cause.message : 'Unable to delete guesthouse.');
-      } finally {
-        setDeletingId(null);
-      }
+  const confirmRemove = async () => {
+    if (!pendingRemove?._id || deletingId) return;
+    const id = pendingRemove._id;
+    try {
+      setDeletingId(id);
+      await api.deleteGuesthouse(id); // <- swap for the suspend call later
+      setItems((prev) => prev.filter((item) => item._id !== id));
+      setPendingRemove(null);
+      showToast({ type: 'success', message: REMOVE.done });
+    } catch (cause) {
+      showToast({
+        type: 'error',
+        message: cause instanceof Error ? cause.message : REMOVE.failed,
+      });
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -237,11 +274,7 @@ export default function Guesthouses() {
       )}
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="bg-black/[0.03] dark:bg-white/[0.04] rounded-2xl h-72" />
-          ))}
-        </div>
+        <GuesthouseSkeletonGrid />
       ) : filteredItems.length === 0 ? (
         <div className="glass-panel rounded-3xl p-12 text-center max-w-lg mx-auto shadow-xs">
           <div className="w-12 h-12 rounded-2xl bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.06] dark:border-white/[0.08] text-[#9E7246] dark:text-[#D6A670] flex items-center justify-center mx-auto mb-3">
@@ -389,7 +422,7 @@ export default function Guesthouses() {
                           Edit
                         </Link>
                         <button
-                          onClick={() => g._id && handleDelete(g._id, g.name)}
+                          onClick={() => setPendingRemove(g)}
                           disabled={!g._id || deletingId !== null}
                           className="p-1.5 text-[#8F7F70] hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait"
                           title={deletingId === g._id ? 'Deleting property...' : 'Delete Property'}
@@ -412,6 +445,26 @@ export default function Guesthouses() {
       <PropertyDetailModal
         property={previewProperty}
         onClose={() => setPreviewProperty(null)}
+      />
+
+      {/* Confirm remove (delete / suspend) */}
+      <ConfirmModal
+        open={pendingRemove !== null}
+        title={REMOVE.title}
+        message={
+          pendingRemove ? (
+            <>
+              <span className="font-semibold">{pendingRemove.name}</span>. {REMOVE.message}
+            </>
+          ) : null
+        }
+        confirmLabel={REMOVE.confirm}
+        loadingLabel={REMOVE.loading}
+        confirmVariant={REMOVE.variant}
+        icon={REMOVE.icon}
+        loading={deletingId !== null}
+        onConfirm={confirmRemove}
+        onCancel={() => setPendingRemove(null)}
       />
     </div>
   );

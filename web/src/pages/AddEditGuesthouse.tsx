@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -15,6 +16,9 @@ import {
 import { api } from '../services/api';
 import type { Guesthouse } from '../types';
 import { useSettings } from '../context/SettingsContext';
+import LoadingButton from '../components/ui/LoadingButton';
+import Spinner from '../components/ui/Spinner';
+import { useToast } from '../components/ui/Toast';
 
 // City presets for Botswana with accurate GPS coordinates
 const CITY_PRESETS: Record<string, { lat: number; lng: number }> = {
@@ -119,6 +123,7 @@ export default function AddEditGuesthouse() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [successToast, setSuccessToast] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (!id) return;
@@ -228,6 +233,7 @@ export default function AddEditGuesthouse() {
       setError(
         cause instanceof Error ? cause.message : 'Unable to save guesthouse property.',
       );
+      showToast({ type: 'error', message: "Couldn't save the guesthouse. Please try again." });
       setSaving(false);
     }
   };
@@ -295,9 +301,24 @@ export default function AddEditGuesthouse() {
       {successToast && (
         <div className="fixed bottom-6 right-6 z-50 p-4 bg-[#231A14] text-white dark:bg-[#EAE2D8] dark:text-[#181310] rounded-2xl shadow-xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom duration-200 text-xs font-semibold">
           <Check className="w-4 h-4 text-emerald-400 dark:text-emerald-600" />
-          <span>Guesthouse saved successfully! Redirecting...</span>
+          <span>{id ? 'Guesthouse updated successfully' : 'Guesthouse added successfully'}</span>
         </div>
       )}
+
+      {saving && !successToast &&
+        createPortal(
+          <div
+            role="status"
+            aria-live="polite"
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+          >
+            <div className="flex items-center gap-3 rounded-2xl border border-[#E8D8C3] dark:border-[#382B22] bg-white dark:bg-[#1D1714] px-6 py-5 shadow-xl text-sm font-semibold text-[#231A14] dark:text-[#F7F4EF]">
+              <Spinner className="w-5 h-5 text-[#9E7246]" />
+              <span>Updating guesthouse database...</span>
+            </div>
+          </div>,
+          document.body,
+        )}
 
       {/* Form & Live Preview Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -639,20 +660,21 @@ export default function AddEditGuesthouse() {
               >
                 Cancel
               </Link>
-              <button
+              <LoadingButton
                 type="submit"
-                disabled={saving || preparingImages}
-                className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#231A14] hover:bg-[#372A22] dark:bg-[#EAE2D8] dark:text-[#181310] dark:hover:bg-white text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-60"
+                loading={saving}
+                loadingText={
+                  logoFile || galleryFiles.length
+                    ? 'Uploading photos...'
+                    : id
+                      ? 'Saving...'
+                      : 'Adding...'
+                }
+                disabled={preparingImages}
+                icon={<Check className="w-4 h-4 text-[#D6A670] dark:text-[#9E7246]" />}
               >
-                {saving ? (
-                  <span>{logoFile || galleryFiles.length ? 'Uploading photos & saving...' : 'Saving guesthouse...'}</span>
-                ) : (
-                  <>
-                    <Check className="w-4 h-4 text-[#D6A670] dark:text-[#9E7246]" />
-                    <span>{id ? 'Save Changes' : 'Register Guesthouse'}</span>
-                  </>
-                )}
-              </button>
+                {id ? 'Save Changes' : 'Register Guesthouse'}
+              </LoadingButton>
             </div>
           </div>
         </form>
