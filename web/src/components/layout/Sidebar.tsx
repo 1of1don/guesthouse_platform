@@ -9,6 +9,7 @@ import {
   MapPin,
   Plus,
   Sparkles,
+  Map, // ── NEW
 } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 
@@ -29,6 +30,11 @@ const navLinks = [
     label: 'Guesthouses',
     icon: Building2,
     badge: 'count',
+  },
+  {
+    to: '/map',          // ── NEW
+    label: 'Map View',   // ── NEW
+    icon: Map,           // ── NEW
   },
   {
     to: '/assistant',

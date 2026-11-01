@@ -11,6 +11,7 @@ import AddEditGuesthouse from './pages/AddEditGuesthouse';
 import AdminUsers from './pages/AdminUsers';
 import Settings from './pages/Settings';
 import Assistant from './pages/Assistant';
+import MapView from './pages/MapView'; // ── NEW
 
 function ProtectedRoute({ children }: { children: React.ReactElement }) {
   const { isAuthenticated, status, error } = useAuth();
@@ -74,6 +75,7 @@ export default function App() {
               <Route path="/guesthouses" element={<Guesthouses />} />
               <Route path="/guesthouses/new" element={<AddEditGuesthouse />} />
               <Route path="/guesthouses/:id/edit" element={<AddEditGuesthouse />} />
+              <Route path="/map" element={<MapView />} /> {/* ── NEW */}
               <Route path="/admins" element={<AdminUsers />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/assistant" element={<Assistant />} />

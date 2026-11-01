@@ -8,6 +8,8 @@ import {
   SunMedium,
   Coffee,
   Sparkles,
+  PauseCircle,   // NEW – suspend icon
+  PlayCircle,    // NEW – activate icon
 } from 'lucide-react';
 import type { Guesthouse } from '../../types';
 import { useSettings } from '../../context/SettingsContext';
@@ -15,15 +17,29 @@ import { useSettings } from '../../context/SettingsContext';
 interface PropertyCardProps {
   property: Guesthouse;
   onPreview: (property: Guesthouse) => void;
+  // ── NEW ──────────────────────────────────────────────────────────────────────
+  // Called when the admin clicks Suspend or Activate on this card.
+  // Guesthouses.tsx owns the actual API call; the card just triggers it.
+  onSuspend?: (id: string, name: string, currentStatus: string) => void;
+  suspending?: boolean; // true while the API call for THIS card is in flight
+  // ─────────────────────────────────────────────────────────────────────────────
 }
 
-export default function PropertyCard({ property, onPreview }: PropertyCardProps) {
+export default function PropertyCard({
+  property,
+  onPreview,
+  onSuspend,
+  suspending = false,
+}: PropertyCardProps) {
   const { formatPrice } = useSettings();
 
   const thumbnail =
     property.logo ||
     (property.gallery && property.gallery[0]) ||
     'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80';
+
+  // ── NEW: derive suspension state from the status field ────────────────────
+  const isSuspended = property.status === 'suspended';
 
   const getAmenityIcon = (name: string) => {
     const lower = name.toLowerCase();
@@ -35,7 +51,12 @@ export default function PropertyCard({ property, onPreview }: PropertyCardProps)
   };
 
   return (
-    <div className="glass-card rounded-2xl overflow-hidden flex flex-col group transition-all duration-200">
+    <div
+      className={`glass-card rounded-2xl overflow-hidden flex flex-col group transition-all duration-200 ${
+        // ── NEW: dim the card slightly when suspended so it's visually distinct
+        isSuspended ? 'opacity-70 ring-1 ring-amber-400/40 dark:ring-amber-500/30' : ''
+      }`}
+    >
       {/* Property Image Cover */}
       <div className="relative aspect-16/10 bg-black/[0.04] dark:bg-white/[0.04] overflow-hidden">
         <img
@@ -48,6 +69,22 @@ export default function PropertyCard({ property, onPreview }: PropertyCardProps)
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
+
+        {/* ── NEW: Status badge — top-right corner of the image ──────────────── */}
+        <div className="absolute top-2.5 right-2.5">
+          {isSuspended ? (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold tracking-wide rounded-lg bg-amber-400/90 text-amber-900 shadow-sm backdrop-blur-sm">
+              <PauseCircle className="w-3 h-3" />
+              Suspended
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold tracking-wide rounded-lg bg-emerald-500/90 text-white shadow-sm backdrop-blur-sm">
+              <PlayCircle className="w-3 h-3" />
+              Active
+            </span>
+          )}
+        </div>
+        {/* ──────────────────────────────────────────────────────────────────── */}
       </div>
 
       {/* Property Details */}
@@ -91,8 +128,8 @@ export default function PropertyCard({ property, onPreview }: PropertyCardProps)
         </div>
 
         {/* Footer: Nightly Rate & Action Buttons */}
-        <div className="mt-4 pt-3 border-t border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between">
-          <div>
+        <div className="mt-4 pt-3 border-t border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between gap-2">
+          <div className="shrink-0">
             <span className="text-[10px] uppercase font-semibold tracking-wider text-[#8F7F70] dark:text-[#7A6C60] block">
               Price
             </span>
@@ -104,7 +141,8 @@ export default function PropertyCard({ property, onPreview }: PropertyCardProps)
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+            {/* Quick-preview button — unchanged */}
             <button
               onClick={() => onPreview(property)}
               className="p-2 text-[#7A6C60] hover:text-[#231A14] dark:text-[#A69788] dark:hover:text-[#F7F4EF] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] rounded-xl transition-colors cursor-pointer"
@@ -112,6 +150,8 @@ export default function PropertyCard({ property, onPreview }: PropertyCardProps)
             >
               <Eye className="w-4 h-4" />
             </button>
+
+            {/* Edit button — unchanged */}
             <Link
               to={`/guesthouses/${property._id}/edit`}
               className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-[#231A14] dark:text-[#EAE2D8] bg-black/[0.03] dark:bg-white/[0.05] hover:bg-black/[0.06] dark:hover:bg-white/[0.08] border border-black/[0.06] dark:border-white/[0.08] rounded-xl transition-colors"
@@ -119,6 +159,37 @@ export default function PropertyCard({ property, onPreview }: PropertyCardProps)
               <Edit2 className="w-3.5 h-3.5" />
               <span>Edit</span>
             </Link>
+
+            {/* ── NEW: Suspend / Activate button ──────────────────────────── */}
+            {onSuspend && property._id && (
+              <button
+                onClick={() => onSuspend(property._id!, property.name, property.status ?? 'active')}
+                disabled={suspending}
+                title={isSuspended ? 'Reactivate this listing' : 'Suspend this listing'}
+                className={`inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-xl transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait ${
+                  isSuspended
+                    ? // Suspended → show green Activate button
+                      'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800'
+                    : // Active → show amber Suspend button
+                      'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-200 dark:border-amber-800'
+                }`}
+              >
+                {suspending ? (
+                  <span className="text-[10px]">Wait…</span>
+                ) : isSuspended ? (
+                  <>
+                    <PlayCircle className="w-3.5 h-3.5" />
+                    <span>Activate</span>
+                  </>
+                ) : (
+                  <>
+                    <PauseCircle className="w-3.5 h-3.5" />
+                    <span>Suspend</span>
+                  </>
+                )}
+              </button>
+            )}
+            {/* ──────────────────────────────────────────────────────────────── */}
           </div>
         </div>
       </div>

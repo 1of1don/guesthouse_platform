@@ -11,7 +11,8 @@ import {
   List,
   Eye,
   Trash2,
-  SlidersHorizontal,
+  PauseCircle,   // NEW
+  PlayCircle,    // NEW
 } from 'lucide-react';
 import PropertyCard from '../components/ui/PropertyCard';
 import PropertyDetailModal from '../components/ui/PropertyDetailModal';
@@ -31,6 +32,9 @@ export default function Guesthouses() {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [previewProperty, setPreviewProperty] = useState<Guesthouse | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  // ── NEW ──────────────────────────────────────────────────────────────────────
+  const [suspendingId, setSuspendingId] = useState<string | null>(null);
+  // ─────────────────────────────────────────────────────────────────────────────
 
   const loadData = () => {
     setLoading(true);
@@ -65,6 +69,49 @@ export default function Guesthouses() {
       }
     }
   };
+
+  // ── NEW ──────────────────────────────────────────────────────────────────────
+  /**
+   * handleSuspend — toggle a guesthouse between 'active' and 'suspended'.
+   *
+   * @param id            The guesthouse's _id
+   * @param name          Display name (used in the confirm dialog)
+   * @param currentStatus The guesthouse's current status string
+   *
+   * How it works:
+   *  1. Ask for confirmation so admins don't suspend by accident.
+   *  2. Call api.suspendGuesthouse() which writes to Firestore (if live) AND
+   *     to localStorage (always), so the UI stays correct in demo mode too.
+   *  3. Optimistically update the local `items` state so the badge/button
+   *     flips immediately — no full page reload needed.
+   */
+  const handleSuspend = async (id: string, name: string, currentStatus: string) => {
+    if (suspendingId) return; // Block concurrent calls
+
+    const willSuspend = currentStatus !== 'suspended';
+    const action = willSuspend ? 'suspend' : 'activate';
+
+    if (!confirm(`Are you sure you want to ${action} "${name}"?`)) return;
+
+    try {
+      setSuspendingId(id);
+      await api.suspendGuesthouse(id, willSuspend);
+
+      // Update the item in local state — no re-fetch required
+      setItems((prev) =>
+        prev.map((g) =>
+          g._id === id
+            ? { ...g, status: willSuspend ? 'suspended' : 'active' }
+            : g,
+        ),
+      );
+    } catch (cause) {
+      alert(cause instanceof Error ? cause.message : `Unable to ${action} guesthouse.`);
+    } finally {
+      setSuspendingId(null);
+    }
+  };
+  // ─────────────────────────────────────────────────────────────────────────────
 
   const allCities = useMemo(() => {
     const set = new Set<string>();
@@ -276,16 +323,21 @@ export default function Guesthouses() {
           </div>
         </div>
       ) : viewMode === 'grid' ? (
+        /* ── GRID VIEW ────────────────────────────────────────────────────────── */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredItems.map((guesthouse) => (
             <PropertyCard
               key={guesthouse._id}
               property={guesthouse}
               onPreview={setPreviewProperty}
+              // ── NEW: pass suspend handler and loading flag ──
+              onSuspend={handleSuspend}
+              suspending={suspendingId === guesthouse._id}
             />
           ))}
         </div>
       ) : (
+        /* ── TABLE VIEW ───────────────────────────────────────────────────────── */
         <div className="glass-panel rounded-2xl overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
@@ -295,12 +347,15 @@ export default function Guesthouses() {
                   <th className="py-3 px-4">City / Area</th>
                   <th className="py-3 px-4">Key Amenities</th>
                   <th className="py-3 px-4 text-right">Price / Night ({currency.code})</th>
-                  <th className="py-3 px-4 text-center">Mobile Rating</th>
+                  <th className="py-3 px-4 text-center">Rating</th>
+                  {/* ── NEW: Status column ── */}
+                  <th className="py-3 px-4 text-center">Status</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-black/[0.04] dark:divide-white/[0.05]">
                 {filteredItems.map((g) => {
+                  const isSuspended = g.status === 'suspended';
                   const thumb =
                     g.logo ||
                     (g.gallery && g.gallery[0]) ||
@@ -308,7 +363,10 @@ export default function Guesthouses() {
                   return (
                     <tr
                       key={g._id}
-                      className="hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors group"
+                      className={`hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors group ${
+                        // ── NEW: subtle amber tint on suspended rows
+                        isSuspended ? 'bg-amber-50/40 dark:bg-amber-950/10' : ''
+                      }`}
                     >
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
@@ -374,6 +432,22 @@ export default function Guesthouses() {
                         )}
                       </td>
 
+                      {/* ── NEW: Status badge cell ──────────────────────────────── */}
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
+                        {isSuspended ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-lg bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                            <PauseCircle className="w-3 h-3" />
+                            Suspended
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
+                            <PlayCircle className="w-3 h-3" />
+                            Active
+                          </span>
+                        )}
+                      </td>
+                      {/* ──────────────────────────────────────────────────────────── */}
+
                       <td className="py-3 px-4 text-right whitespace-nowrap space-x-1">
                         <button
                           onClick={() => setPreviewProperty(g)}
@@ -388,6 +462,30 @@ export default function Guesthouses() {
                         >
                           Edit
                         </Link>
+
+                        {/* ── NEW: Suspend / Activate button in table row ─────── */}
+                        {g._id && (
+                          <button
+                            onClick={() => handleSuspend(g._id!, g.name, g.status ?? 'active')}
+                            disabled={suspendingId !== null}
+                            title={isSuspended ? 'Activate listing' : 'Suspend listing'}
+                            className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait ${
+                              isSuspended
+                                ? 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30'
+                                : 'text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30'
+                            }`}
+                          >
+                            {suspendingId === g._id ? (
+                              <span className="text-[10px]">…</span>
+                            ) : isSuspended ? (
+                              <PlayCircle className="w-4 h-4" />
+                            ) : (
+                              <PauseCircle className="w-4 h-4" />
+                            )}
+                          </button>
+                        )}
+                        {/* ────────────────────────────────────────────────────── */}
+
                         <button
                           onClick={() => g._id && handleDelete(g._id, g.name)}
                           disabled={!g._id || deletingId !== null}
