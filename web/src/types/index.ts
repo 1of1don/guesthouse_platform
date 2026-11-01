@@ -19,14 +19,34 @@ export interface Guesthouse {
     lng: number;
   };
   pricePerNight: number;      // Price per night in BWP (Pula) or chosen currency
-  rating?: number;            // Optional average rating (synced when mobile users rate)
+  rating?: number;            // Average rating, read from averageRating (written by the mobile app)
+  ratingCount?: number;       // How many customers have rated it
   logo?: string;              // Firebase Storage download URL for the main photo
   gallery?: string[];         // Firebase Storage download URLs for gallery photos
   createdAt?: string;         // ISO date string of when this listing was created
-  isSuspended?: boolean;     // Missing means active; status supports older records.
-  // ── NEW ──────────────────────────────────────────────────────────────────────
-  status?: 'active' | 'suspended'; // Listing visibility: 'active' shows to guests,
-                                   // 'suspended' hides from mobile app until reactivated
+  isSuspended?: boolean;      // true = hidden from the mobile app. Missing means active.
+  status?: 'active' | 'suspended'; // Same as isSuspended, kept for older records
+}
+
+// Blueprint for a customer who signed up on the mobile app
+export interface Customer {
+  _id: string;                // Firebase Auth uid
+  name: string;
+  email: string;
+  createdAt?: string;
+  isSuspended?: boolean;      // true = can still browse but can't post reviews
+}
+
+// A rating + comment a customer left on a guesthouse (ratings collection)
+export interface Review {
+  _id: string;                // `${guesthouseId}_${customerId}`
+  guesthouseId: string;
+  customerId: string;
+  customerName: string;
+  score: number;              // 1 to 5
+  comment: string;
+  createdAt?: string;
+  isHidden: boolean;          // hidden by an admin, not counted in the average
 }
 
 // Possible administrator roles
@@ -53,6 +73,7 @@ export interface CityPriceStat {
 // Blueprint for Dashboard summary numbers (KPIs)
 export interface DashboardStats {
   totalGuesthouses: number;   // Total count of all registered guesthouses
+  suspendedCount: number;     // How many of those are hidden from the mobile app
   topCity: {                  // City with the highest number of listings
     name: string;
     count: number;

@@ -4,6 +4,8 @@ import {
   doc,
   getDoc,
   getDocs,
+  onSnapshot,
+  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -18,7 +20,7 @@ import {
   type StorageReference,
 } from 'firebase/storage';
 import { db, isFirebaseConfigured, storage } from '../firebase';
-import type { AdminUser, DashboardStats, Guesthouse, CityPriceStat } from '../types';
+import type { AdminUser, CityPriceStat, Customer, DashboardStats, Guesthouse, Review } from '../types';
 
 // Helper type for image uploads from the Add/Edit form
 type GuesthouseImages = {
@@ -95,10 +97,29 @@ const stringList = (value: unknown): string[] => {
   return [];
 };
 
+// The mobile app keeps ratingSum / ratingCount / averageRating up to date when
+// a customer rates, so read those first. "rating" is from the early test data.
+function ratingFrom(data: DocumentData): number | undefined {
+  if (data.averageRating !== undefined) return numberOrZero(data.averageRating);
+  const count = numberOrZero(data.ratingCount);
+  if (count > 0) return numberOrZero(data.ratingSum) / count;
+  return data.rating !== undefined ? numberOrZero(data.rating) : undefined;
+}
+
+// New rating totals for a guesthouse after a review is hidden, restored or deleted
+function totalsAfter(data: DocumentData, scoreChange: number, countChange: number) {
+  const ratingSum = Math.max(0, numberOrZero(data.ratingSum) + scoreChange);
+  const ratingCount = Math.max(0, numberOrZero(data.ratingCount) + countChange);
+  return { ratingSum, ratingCount, averageRating: ratingCount ? ratingSum / ratingCount : 0 };
+}
+
 // Converts raw Firestore document data into our typed Guesthouse object
 function toGuesthouse(id: string, data: DocumentData): Guesthouse {
   const latitude = data.latitude ?? data.coordinates?.lat ?? -24.6282;
   const longitude = data.longitude ?? data.coordinates?.lng ?? 25.9231;
+  // Old records only have status, newer ones have the isSuspended boolean.
+  const suspended =
+    typeof data.isSuspended === 'boolean' ? data.isSuspended : data.status === 'suspended';
   const createdAt =
     data.createdAt?.toDate?.() ??
     (typeof data.createdAt === 'string'
@@ -118,13 +139,13 @@ function toGuesthouse(id: string, data: DocumentData): Guesthouse {
       lng: numberOrZero(longitude),
     },
     pricePerNight: numberOrZero(data.pricePerNight),
-    rating: data.rating !== undefined ? numberOrZero(data.rating) : undefined,
+    rating: ratingFrom(data),
+    ratingCount: numberOrZero(data.ratingCount),
     logo: data.logoUrl ?? data.logo ?? '',
     gallery: stringList(data.galleryUrls ?? data.gallery),
     createdAt: createdAt?.toISOString() || new Date().toISOString(),
-    // ── NEW: read status from Firestore; default to 'active' if not set ──
-    isSuspended: typeof data.isSuspended === 'boolean' ? data.isSuspended : data.status === 'suspended',
-    status: (typeof data.isSuspended === 'boolean' ? data.isSuspended : data.status === 'suspended') ? 'suspended' : 'active',
+    isSuspended: suspended,
+    status: suspended ? 'suspended' : 'active',
   };
 }
 
@@ -140,7 +161,6 @@ function guesthouseFields(data: Partial<Guesthouse>) {
     latitude: data.coordinates?.lat ?? -24.6282,
     longitude: data.coordinates?.lng ?? 25.9231,
     pricePerNight: data.pricePerNight ?? 0,
-    // ── NEW: persist status when creating/updating a guesthouse ──
     isSuspended: data.isSuspended ?? (data.status === 'suspended'),
     status: (data.isSuspended ?? (data.status === 'suspended')) ? 'suspended' : 'active',
   };
@@ -199,6 +219,71 @@ async function uploadImages(
 }
 
 
+// Works out the dashboard numbers from a list of guesthouses. Kept outside the
+// api object so the dashboard can rerun it every time the live list changes.
+export function buildDashboardStats(guesthouses: Guesthouse[]): DashboardStats {
+  const cityMap = new Map<string, { count: number; priceTotal: number }>();
+  let priceSum = 0;
+
+  // Group guesthouses by city to calculate city statistics
+  for (const gh of guesthouses) {
+    const city = gh.city || 'Unknown';
+    const existing = cityMap.get(city) || { count: 0, priceTotal: 0 };
+    existing.count += 1;
+    existing.priceTotal += gh.pricePerNight || 0;
+    cityMap.set(city, existing);
+    priceSum += gh.pricePerNight || 0;
+  }
+
+  // Build city distribution array sorted by highest count first
+  const cityDistribution: CityPriceStat[] = [...cityMap.entries()]
+    .map(([city, data]) => ({
+      city,
+      count: data.count,
+      avgPrice: Math.round(data.priceTotal / data.count),
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  // Identify city with the most guesthouses
+  const topCity = cityDistribution[0]
+    ? { name: cityDistribution[0].city, count: cityDistribution[0].count }
+    : { name: '—', count: 0 };
+
+  // Highest rated: only check guesthouses with ratings greater than 0
+  const ratedGuesthouses = guesthouses.filter((g) => (g.rating ?? 0) > 0);
+  const highestRated = [...ratedGuesthouses].sort(
+    (a, b) => (b.rating ?? 0) - (a.rating ?? 0),
+  )[0];
+
+  // Count how many guesthouses were added in the current calendar month
+  const now = new Date();
+  const addedThisMonth = guesthouses.filter((gh) => {
+    if (!gh.createdAt) return false;
+    const createdAt = new Date(gh.createdAt);
+    return (
+      createdAt.getFullYear() === now.getFullYear() &&
+      createdAt.getMonth() === now.getMonth()
+    );
+  }).length;
+
+  // Return the calculated stats object
+  return {
+    totalGuesthouses: guesthouses.length,
+    suspendedCount: guesthouses.filter((gh) => gh.isSuspended).length,
+    topCity,
+    highestRated: highestRated
+      ? { name: highestRated.name, rating: highestRated.rating ?? 0 }
+      : { name: 'No ratings yet', rating: 0 },
+    addedThisMonth,
+    averagePrice: guesthouses.length ? Math.round(priceSum / guesthouses.length) : 0,
+    cityDistribution,
+    recent: [...guesthouses]
+      .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
+      .slice(0, 5),
+  };
+}
+
+
 // PUBLIC API OBJECT (Imported and used by all pages)
 export const api = {
   // Check if live Firebase is active
@@ -207,68 +292,8 @@ export const api = {
 
   // Calculates total guesthouses, top destination city, highest rating,
   // average nightly price, and city breakdown.
-  getDashboardStats: async (): Promise<DashboardStats> => {
-    // Fetch all guesthouses first
-    const guesthouses = await api.getGuesthouses();
-    const cityMap = new Map<string, { count: number; priceTotal: number }>();
-    let priceSum = 0;
-
-    // Group guesthouses by city to calculate city statistics
-    for (const gh of guesthouses) {
-      const city = gh.city || 'Unknown';
-      const existing = cityMap.get(city) || { count: 0, priceTotal: 0 };
-      existing.count += 1;
-      existing.priceTotal += gh.pricePerNight || 0;
-      cityMap.set(city, existing);
-      priceSum += gh.pricePerNight || 0;
-    }
-
-    // Build city distribution array sorted by highest count first
-    const cityDistribution: CityPriceStat[] = [...cityMap.entries()]
-      .map(([city, data]) => ({
-        city,
-        count: data.count,
-        avgPrice: Math.round(data.priceTotal / data.count),
-      }))
-      .sort((a, b) => b.count - a.count);
-
-    // Identify city with the most guesthouses
-    const topCity = cityDistribution[0]
-      ? { name: cityDistribution[0].city, count: cityDistribution[0].count }
-      : { name: '—', count: 0 };
-
-    // Highest rated: only check guesthouses with ratings greater than 0
-    const ratedGuesthouses = guesthouses.filter((g) => (g.rating ?? 0) > 0);
-    const highestRated = ratedGuesthouses.sort(
-      (a, b) => (b.rating ?? 0) - (a.rating ?? 0),
-    )[0];
-
-    // Count how many guesthouses were added in the current calendar month
-    const now = new Date();
-    const addedThisMonth = guesthouses.filter((gh) => {
-      if (!gh.createdAt) return false;
-      const createdAt = new Date(gh.createdAt);
-      return (
-        createdAt.getFullYear() === now.getFullYear() &&
-        createdAt.getMonth() === now.getMonth()
-      );
-    }).length;
-
-    // Return the calculated stats object
-    return {
-      totalGuesthouses: guesthouses.length,
-      topCity,
-      highestRated: highestRated
-        ? { name: highestRated.name, rating: highestRated.rating ?? 0 }
-        : { name: 'No ratings yet', rating: 0 },
-      addedThisMonth,
-      averagePrice: guesthouses.length ? Math.round(priceSum / guesthouses.length) : 0,
-      cityDistribution,
-      recent: [...guesthouses]
-        .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
-        .slice(0, 5),
-    };
-  },
+  getDashboardStats: async (): Promise<DashboardStats> =>
+    buildDashboardStats(await api.getGuesthouses()),
 
 
   // Loads all guesthouses from Firebase Firestore, with LocalStorage fallback
@@ -277,11 +302,10 @@ export const api = {
     if (isFirebaseConfigured && db) {
       try {
         const snapshot = await getDocs(collection(db, 'guesthouses'));
-        if (!snapshot.empty) {
-          const list = snapshot.docs.map((item) => toGuesthouse(item.id, item.data()));
-          setLocalData(STORAGE_KEYS.GUESTHOUSES, list);
-          return list;
-        }
+        // An empty collection is a real answer, don't fall back to old cached listings.
+        const list = snapshot.docs.map((item) => toGuesthouse(item.id, item.data()));
+        setLocalData(STORAGE_KEYS.GUESTHOUSES, list);
+        return list;
       } catch (err) {
         console.warn('Firestore fetch failed, using local cache:', err);
       }
@@ -291,6 +315,28 @@ export const api = {
   },
 
  
+  // Live version of getGuesthouses. Ratings from the mobile app and suspensions
+  // made by other admins show up without a refresh. Returns the unsubscribe function.
+  watchGuesthouses: (
+    onChange: (items: Guesthouse[]) => void,
+    onError: (error: Error) => void,
+  ): (() => void) => {
+    if (!isFirebaseConfigured || !db) {
+      onChange(getLocalData<Guesthouse[]>(STORAGE_KEYS.GUESTHOUSES, INITIAL_GUESTHOUSES));
+      return () => {};
+    }
+    return onSnapshot(
+      collection(db, 'guesthouses'),
+      (snapshot) => {
+        const list = snapshot.docs.map((item) => toGuesthouse(item.id, item.data()));
+        setLocalData(STORAGE_KEYS.GUESTHOUSES, list);
+        onChange(list);
+      },
+      onError,
+    );
+  },
+
+
   // GET SINGLE GUESTHOUSE BY ID
   // Used by the Edit page to load existing data for a guesthouse
  
@@ -328,7 +374,9 @@ export const api = {
       await setDoc(guesthouseRef, {
         ...guesthouseFields(data),
         ...imageFields,
-        rating: 0,
+        ratingSum: 0,
+        ratingCount: 0,
+        averageRating: 0,
         createdAt: serverTimestamp(),
       });
       return guesthouseRef.id;
@@ -448,11 +496,9 @@ export const api = {
     );
   },
 
-  // ── NEW ──────────────────────────────────────────────────────────────────────
   // SUSPEND / ACTIVATE GUESTHOUSE
-  // Sets status to 'suspended' (hidden from mobile app) or 'active' (visible).
-  // Does NOT delete any data — the listing can be reactivated at any time.
-  // ─────────────────────────────────────────────────────────────────────────────
+  // isSuspended = true hides the listing from the mobile app, false shows it again.
+  // Nothing is deleted, so a listing can be reactivated at any time.
   suspendGuesthouse: async (id: string, suspend: boolean): Promise<void> => {
     const newStatus: 'active' | 'suspended' = suspend ? 'suspended' : 'active';
 
@@ -531,6 +577,103 @@ export const api = {
   },
 
  
+  // CUSTOMERS (people who signed up on the mobile app)
+  // The mobile app saves them in the "customers" collection using their login uid.
+
+  getCustomers: async (): Promise<Customer[]> => {
+    if (!isFirebaseConfigured || !db) return [];
+    const snapshot = await getDocs(collection(db, 'customers'));
+    return snapshot.docs.map((item) => {
+      const data = item.data();
+      return {
+        _id: item.id,
+        name: data.name ?? '',
+        email: data.email ?? '',
+        createdAt: data.createdAt?.toDate?.()?.toISOString(),
+        isSuspended: data.isSuspended === true,
+      };
+    });
+  },
+
+  // A suspended customer can still browse on the mobile app but can't rate or
+  // review (firestore.rules checks this too).
+  setCustomerSuspended: async (id: string, suspend: boolean): Promise<void> => {
+    if (!isFirebaseConfigured || !db) throw new Error('Firebase is not configured.');
+    await updateDoc(doc(db, 'customers', id), {
+      isSuspended: suspend,
+      suspendedAt: suspend ? serverTimestamp() : null,
+    });
+  },
+
+  // Only removes the profile document. The login itself still has to be
+  // removed under Authentication in the Firebase console.
+  deleteCustomer: async (id: string): Promise<void> => {
+    if (!isFirebaseConfigured || !db) return;
+    await deleteDoc(doc(db, 'customers', id));
+  },
+
+  // REVIEWS (ratings + comments from the mobile app)
+
+  getReviews: async (): Promise<Review[]> => {
+    if (!isFirebaseConfigured || !db) return [];
+    const snapshot = await getDocs(collection(db, 'ratings'));
+    return snapshot.docs
+      .map((item) => {
+        const data = item.data();
+        return {
+          _id: item.id,
+          guesthouseId: data.guesthouseId ?? '',
+          customerId: data.customerId ?? '',
+          customerName: data.customerName ?? 'Guest',
+          score: numberOrZero(data.score),
+          comment: data.comment ?? '',
+          createdAt: data.createdAt?.toDate?.()?.toISOString(),
+          isHidden: data.isHidden === true,
+        };
+      })
+      .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
+  },
+
+  // Hiding a review takes it off the mobile app and out of the guesthouse average,
+  // like a removed review on Airbnb. Restoring puts it back. Done in a transaction
+  // so ratingSum / ratingCount stay correct.
+  setReviewHidden: async (review: Review, hidden: boolean): Promise<void> => {
+    if (!isFirebaseConfigured || !db) throw new Error('Firebase is not configured.');
+    const firestore = db;
+    await runTransaction(firestore, async (tx) => {
+      const reviewRef = doc(firestore, 'ratings', review._id);
+      const guesthouseRef = doc(firestore, 'guesthouses', review.guesthouseId);
+      const [reviewSnap, guesthouseSnap] = await Promise.all([tx.get(reviewRef), tx.get(guesthouseRef)]);
+      if (!reviewSnap.exists()) throw new Error('This review no longer exists.');
+      const wasHidden = reviewSnap.data().isHidden === true;
+      if (wasHidden === hidden) return;
+
+      tx.update(reviewRef, { isHidden: hidden, hiddenAt: hidden ? serverTimestamp() : null });
+      if (guesthouseSnap.exists()) {
+        const score = numberOrZero(reviewSnap.data().score);
+        const change = hidden ? -1 : 1;
+        tx.update(guesthouseRef, totalsAfter(guesthouseSnap.data(), score * change, change));
+      }
+    });
+  },
+
+  deleteReview: async (review: Review): Promise<void> => {
+    if (!isFirebaseConfigured || !db) throw new Error('Firebase is not configured.');
+    const firestore = db;
+    await runTransaction(firestore, async (tx) => {
+      const reviewRef = doc(firestore, 'ratings', review._id);
+      const guesthouseRef = doc(firestore, 'guesthouses', review.guesthouseId);
+      const [reviewSnap, guesthouseSnap] = await Promise.all([tx.get(reviewRef), tx.get(guesthouseRef)]);
+      if (!reviewSnap.exists()) return;
+      tx.delete(reviewRef);
+      // A hidden review was already taken out of the totals
+      if (guesthouseSnap.exists() && reviewSnap.data().isHidden !== true) {
+        tx.update(guesthouseRef, totalsAfter(guesthouseSnap.data(), -numberOrZero(reviewSnap.data().score), -1));
+      }
+    });
+  },
+
+
   // Helper function to wipe browser cache and restore default guesthouses
  
   resetDemoData: () => {

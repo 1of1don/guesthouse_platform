@@ -103,6 +103,8 @@ One document per guesthouse. Created and edited by admins in the web portal.
 | `ratingCount` | number | How many customers have rated. Starts at `0`. |
 | `averageRating` | number | `ratingSum / ratingCount`, or `0` when nobody has rated. The dashboard reads this for "highest rated". |
 | `createdAt` | timestamp | Set when the guesthouse is created. Used for "added this month". |
+| `isSuspended` | boolean | `true` hides the listing from the mobile app. Missing or `false` means it is live. Only the Suspend button on the web portal changes it. |
+| `status` | string | `active` or `suspended`. Older copy of `isSuspended`, still written so old records keep working. |
 
 Extra fields such as number of rooms or check-in time can be added by the web team. The mobile app ignores fields it does not know.
 
@@ -118,6 +120,8 @@ One document per customer per guesthouse. Written by the mobile app.
 | `score` | number | Whole number from 1 to 5. |
 | `comment` | string | Optional, can be empty. |
 | `createdAt` | timestamp | Time of the last save. Editing a review refreshes it. |
+| `isHidden` | boolean | Set by an admin. A hidden review is not shown on the mobile app and is taken out of the guesthouse totals. The customer can't edit it while hidden. |
+| `hiddenAt` | timestamp | When it was hidden, `null` after it is restored. |
 
 The document ID is built from the guesthouse and the customer. That makes a second rating from the same person land on the **same document**, so it replaces the first instead of adding a duplicate.
 
@@ -130,6 +134,8 @@ Created by the mobile app when someone signs up.
 | `name` | string | Full name from the sign-up form. |
 | `email` | string | Same email used to log in. |
 | `createdAt` | timestamp | Sign-up time. |
+| `isSuspended` | boolean | Set by an admin. A suspended customer can still browse but can't rate or review. Customers can't change this field themselves. |
+| `suspendedAt` | timestamp | When they were suspended, `null` after reactivating. |
 
 ### 4.4 `customers/{customerId}/favourites/{guesthouseId}`
 
@@ -163,8 +169,13 @@ When a customer saves a rating, the app runs one **transaction** that does two t
 |---|---|
 | First rating from this customer | `ratingSum + score`, `ratingCount + 1` |
 | Customer changes an earlier rating | `ratingSum - oldScore + newScore`, `ratingCount` stays the same |
+| Admin hides a review (web portal) | `ratingSum - score`, `ratingCount - 1` |
+| Admin restores a hidden review | `ratingSum + score`, `ratingCount + 1` |
+| Admin deletes a review that was visible | `ratingSum - score`, `ratingCount - 1` (a hidden one was already taken out) |
 
 Then `averageRating = ratingSum / ratingCount`. A transaction is used so that two people rating at the same moment cannot overwrite each other's change.
+
+The web portal reads `averageRating` for the dashboard, the guesthouse list and the reports page.
 
 ## 6. What the mobile app asks the database
 
@@ -184,12 +195,13 @@ No composite indexes are required. Reviews are sorted newest first after they ar
 
 | Collection | Anyone | Logged-in customer | Admin |
 |---|---|---|---|
-| `guesthouses` | read | update only `ratingSum`, `ratingCount`, `averageRating` | create, edit, delete |
-| `ratings` | read | create or edit their own (ID must match their `uid`, score 1 to 5) | delete |
-| `customers/{uid}` and `favourites` | none | read and write their own only | none |
+| `guesthouses` | read | update only `ratingSum`, `ratingCount`, `averageRating` (not when suspended) | create, edit, delete |
+| `ratings` | read | create or edit their own (ID must match their `uid`, score 1 to 5, not suspended, not hidden) | hide / restore, delete |
+| `customers/{uid}` | none | read and write their own, except `isSuspended` | read, suspend / reactivate, delete |
+| `customers/{uid}/favourites` | none | read and write their own only | none |
 | `admins` | none | none | read, create, edit, delete |
 
-The full rules are in `firestore.rules`.
+The full rules are in `web/firestore.rules` (that is the copy `firebase deploy` uses). `mobile/firestore.rules` is kept the same.
 
 **Development rules:** while building, `firestore.dev.rules` opens the whole database until **3 November 2026**, then it locks. Use it to add sample data and test. Replace it with `firestore.rules` before the demo.
 

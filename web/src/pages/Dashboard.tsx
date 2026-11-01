@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import StatCard from '../components/ui/StatCard';
 import PropertyDetailModal from '../components/ui/PropertyDetailModal';
-import { api } from '../services/api';
+import { api, buildDashboardStats } from '../services/api';
 import { useSettings } from '../context/SettingsContext';
 import type { DashboardStats, Guesthouse } from '../types';
 
@@ -25,15 +25,20 @@ export default function Dashboard() {
   const [selectedCity, setSelectedCity] = useState<string>('all');
   const [previewProperty, setPreviewProperty] = useState<Guesthouse | null>(null);
 
+  // Listen instead of loading once, so new ratings from the mobile app and
+  // suspend/activate changes update the numbers straight away.
   useEffect(() => {
-    api.getDashboardStats()
-      .then(setStats)
-      .catch((cause: unknown) => {
-        setError(
-          cause instanceof Error ? cause.message : 'Unable to load dashboard data.',
-        );
-      })
-      .finally(() => setLoading(false));
+    return api.watchGuesthouses(
+      (items) => {
+        setStats(buildDashboardStats(items));
+        setError('');
+        setLoading(false);
+      },
+      (cause) => {
+        setError(cause.message || 'Unable to load dashboard data.');
+        setLoading(false);
+      },
+    );
   }, []);
 
   if (loading) {
@@ -117,11 +122,12 @@ export default function Dashboard() {
         <StatCard
           title="Total Registered Guesthouses"
           value={stats.totalGuesthouses}
-          subtitle={
+          subtitle={[
             stats.addedThisMonth > 0
               ? `+${stats.addedThisMonth} added this month`
-              : 'Live inventory on platform'
-          }
+              : 'Live inventory on platform',
+            stats.suspendedCount > 0 ? `${stats.suspendedCount} suspended` : '',
+          ].filter(Boolean).join(' · ')}
           icon={Building2}
           trend={
             stats.addedThisMonth > 0
@@ -266,7 +272,11 @@ export default function Dashboard() {
                                   {g.name}
                                 </p>
                                 <p className="text-[11px] text-[#7A6C60] dark:text-[#A69788] truncate mt-0.5">
-                                  {g.contactDetails}
+                                  {g.isSuspended ? (
+                                    <span className="font-semibold text-amber-700 dark:text-amber-400">Suspended</span>
+                                  ) : (
+                                    g.contactDetails
+                                  )}
                                 </p>
                               </div>
                             </div>
@@ -285,7 +295,10 @@ export default function Dashboard() {
 
                           <td className="py-3 px-4 text-center whitespace-nowrap">
                             {g.rating && g.rating > 0 ? (
-                              <span className="inline-flex items-center gap-1 text-[#231A14] dark:text-[#F7F4EF] font-semibold font-mono tabular-nums">
+                              <span
+                                className="inline-flex items-center gap-1 text-[#231A14] dark:text-[#F7F4EF] font-semibold font-mono tabular-nums"
+                                title={`${g.ratingCount ?? 0} ratings`}
+                              >
                                 <Star className="w-3.5 h-3.5 fill-[#9E7246] text-[#9E7246]" />
                                 {g.rating.toFixed(2)}
                               </span>

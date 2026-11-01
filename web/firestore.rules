@@ -10,29 +10,57 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
+    // Suspended customers can still browse, they just can't rate or review
+    function notSuspended() {
+      let customer = /databases/$(database)/documents/customers/$(request.auth.uid);
+      return !exists(customer) || get(customer).data.get('isSuspended', false) == false;
+    }
+
+    function changedOnly(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+    }
+
     match /guesthouses/{id} {
       allow read: if true;
       allow create, delete: if isAdmin();
       allow update: if isAdmin() || (
         signedIn()
-        && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['ratingSum', 'ratingCount', 'averageRating'])
+        && notSuspended()
+        && changedOnly(['ratingSum', 'ratingCount', 'averageRating'])
       );
     }
 
     match /ratings/{ratingId} {
+      function validReview() {
+        return signedIn()
+          && notSuspended()
+          && request.resource.data.customerId == request.auth.uid
+          && ratingId == request.resource.data.guesthouseId + '_' + request.auth.uid
+          && request.resource.data.score is int
+          && request.resource.data.score >= 1
+          && request.resource.data.score <= 5
+          && request.resource.data.get('isHidden', false) == false;
+      }
+
       allow read: if true;
-      allow create, update: if signedIn()
-        && request.resource.data.customerId == request.auth.uid
-        && ratingId == request.resource.data.guesthouseId + '_' + request.auth.uid
-        && request.resource.data.score is int
-        && request.resource.data.score >= 1
-        && request.resource.data.score <= 5;
+      allow create: if validReview();
+      // Customers can edit their own review unless an admin has hidden it
+      allow update: if (validReview() && resource.data.get('isHidden', false) == false)
+        || (isAdmin() && changedOnly(['isHidden', 'hiddenAt']));
       allow delete: if isAdmin();
     }
 
     match /customers/{uid} {
-      allow read, write: if signedIn() && request.auth.uid == uid;
+      function isOwner() {
+        return signedIn() && request.auth.uid == uid;
+      }
+
+      allow read: if isOwner() || isAdmin();
+      allow create: if isOwner() && !('isSuspended' in request.resource.data);
+      // Only admins can change the suspension fields
+      allow update: if (isOwner() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isSuspended', 'suspendedAt']))
+        || (isAdmin() && changedOnly(['isSuspended', 'suspendedAt']));
+      allow delete: if isOwner() || isAdmin();
 
       match /favourites/{guesthouseId} {
         allow read, write: if signedIn() && request.auth.uid == uid;

@@ -8,8 +8,8 @@ import {
   SunMedium,
   Coffee,
   Sparkles,
-  PauseCircle,   // NEW – suspend icon
-  PlayCircle,    // NEW – activate icon
+  PauseCircle,
+  PlayCircle,
 } from 'lucide-react';
 import type { Guesthouse } from '../../types';
 import { useSettings } from '../../context/SettingsContext';
@@ -17,12 +17,9 @@ import { useSettings } from '../../context/SettingsContext';
 interface PropertyCardProps {
   property: Guesthouse;
   onPreview: (property: Guesthouse) => void;
-  // ── NEW ──────────────────────────────────────────────────────────────────────
-  // Called when the admin clicks Suspend or Activate on this card.
-  // Guesthouses.tsx owns the actual API call; the card just triggers it.
+  // Guesthouses.tsx does the actual API call, the card just triggers it
   onSuspend?: (id: string, name: string, currentStatus: string) => void;
-  suspending?: boolean; // true while the API call for THIS card is in flight
-  // ─────────────────────────────────────────────────────────────────────────────
+  suspending?: boolean; // true while the request for this card is running
 }
 
 export default function PropertyCard({
@@ -38,8 +35,7 @@ export default function PropertyCard({
     (property.gallery && property.gallery[0]) ||
     'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80';
 
-  // ── NEW: derive suspension state from the status field ────────────────────
-  const isSuspended = property.status === 'suspended';
+  const isSuspended = Boolean(property.isSuspended);
 
   const getAmenityIcon = (name: string) => {
     const lower = name.toLowerCase();
@@ -53,7 +49,6 @@ export default function PropertyCard({
   return (
     <div
       className={`glass-card rounded-2xl overflow-hidden flex flex-col group transition-all duration-200 ${
-        // ── NEW: dim the card slightly when suspended so it's visually distinct
         isSuspended ? 'opacity-70 ring-1 ring-amber-400/40 dark:ring-amber-500/30' : ''
       }`}
     >
@@ -70,7 +65,7 @@ export default function PropertyCard({
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
 
-        {/* ── NEW: Status badge — top-right corner of the image ──────────────── */}
+        {/* Status badge */}
         <div className="absolute top-2.5 right-2.5">
           {isSuspended ? (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold tracking-wide rounded-lg bg-amber-400/90 text-amber-900 shadow-sm backdrop-blur-sm">
@@ -84,7 +79,6 @@ export default function PropertyCard({
             </span>
           )}
         </div>
-        {/* ──────────────────────────────────────────────────────────────────── */}
       </div>
 
       {/* Property Details */}
@@ -142,7 +136,6 @@ export default function PropertyCard({
           </div>
 
           <div className="flex items-center gap-1.5 flex-wrap justify-end">
-            {/* Quick-preview button — unchanged */}
             <button
               onClick={() => onPreview(property)}
               className="p-2 text-[#7A6C60] hover:text-[#231A14] dark:text-[#A69788] dark:hover:text-[#F7F4EF] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] rounded-xl transition-colors cursor-pointer"
@@ -151,7 +144,6 @@ export default function PropertyCard({
               <Eye className="w-4 h-4" />
             </button>
 
-            {/* Edit button — unchanged */}
             <Link
               to={`/guesthouses/${property._id}/edit`}
               className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-[#231A14] dark:text-[#EAE2D8] bg-black/[0.03] dark:bg-white/[0.05] hover:bg-black/[0.06] dark:hover:bg-white/[0.08] border border-black/[0.06] dark:border-white/[0.08] rounded-xl transition-colors"
@@ -160,7 +152,6 @@ export default function PropertyCard({
               <span>Edit</span>
             </Link>
 
-            {/* ── NEW: Suspend / Activate button ──────────────────────────── */}
             {onSuspend && property._id && (
               <button
                 onClick={() => onSuspend(property._id!, property.name, property.status ?? 'active')}
@@ -168,10 +159,8 @@ export default function PropertyCard({
                 title={isSuspended ? 'Reactivate this listing' : 'Suspend this listing'}
                 className={`inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-xl transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait ${
                   isSuspended
-                    ? // Suspended → show green Activate button
-                      'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800'
-                    : // Active → show amber Suspend button
-                      'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-200 dark:border-amber-800'
+                    ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800'
+                    : 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-200 dark:border-amber-800'
                 }`}
               >
                 {suspending ? (
@@ -189,7 +178,6 @@ export default function PropertyCard({
                 )}
               </button>
             )}
-            {/* ──────────────────────────────────────────────────────────────── */}
           </div>
         </div>
       </div>

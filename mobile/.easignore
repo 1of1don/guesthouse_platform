@@ -1,0 +1,24 @@
+# Same as .gitignore, except .env IS uploaded so the APK gets the Firebase keys.
+# (EAS uses this file instead of .gitignore when it exists.)
+node_modules/
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+.metro-health-check*
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.DS_Store
+*.pem
+*.tsbuildinfo
+example
+/ios
+/android

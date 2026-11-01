@@ -11,7 +11,11 @@ import AddEditGuesthouse from './pages/AddEditGuesthouse';
 import AdminUsers from './pages/AdminUsers';
 import Settings from './pages/Settings';
 import Assistant from './pages/Assistant';
-import MapView from './pages/MapView'; // ── NEW
+import MapView from './pages/MapView';
+import UserManagement from './pages/UserManagement';
+import Reports from './pages/Reports';
+import Profile from './pages/Profile';
+import { ToastProvider } from './components/ui/Toast';
 
 function ProtectedRoute({ children }: { children: React.ReactElement }) {
   const { isAuthenticated, status, error } = useAuth();
@@ -58,6 +62,7 @@ function ProtectedRoute({ children }: { children: React.ReactElement }) {
 export default function App() {
   return (
     <SettingsProvider>
+      <ToastProvider>
       <AuthProvider>
         <BrowserRouter>
           <Routes>
@@ -75,8 +80,11 @@ export default function App() {
               <Route path="/guesthouses" element={<Guesthouses />} />
               <Route path="/guesthouses/new" element={<AddEditGuesthouse />} />
               <Route path="/guesthouses/:id/edit" element={<AddEditGuesthouse />} />
-              <Route path="/map" element={<MapView />} /> {/* ── NEW */}
+              <Route path="/map" element={<MapView />} />
               <Route path="/admins" element={<AdminUsers />} />
+              <Route path="/users" element={<UserManagement />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/profile" element={<Profile />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/assistant" element={<Assistant />} />
             </Route>
@@ -85,6 +93,7 @@ export default function App() {
           </Routes>
         </BrowserRouter>
       </AuthProvider>
+      </ToastProvider>
     </SettingsProvider>
   );
 }

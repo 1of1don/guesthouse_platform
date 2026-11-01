@@ -209,6 +209,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const clearError = () => setError(null);
 
+  // Lets the profile page update the name shown in the sidebar straight away
+  const updateDisplayName = (name: string) =>
+    setUser((prev) => (prev ? { ...prev, displayName: name } : prev));
+
   // Return the provider wrapping the entire app
   return (
     <AuthContext.Provider
@@ -220,6 +224,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         logout,
         clearError,
+        updateDisplayName,
       }}
     >
       {children}

@@ -26,6 +26,7 @@ export type Review = {
   score: number; // 1..5
   comment: string;
   createdAt: number;
+  isHidden?: boolean; // hidden by an admin, not shown and not counted in the average
 };
 
 export type Customer = { id: string; name: string; email: string };

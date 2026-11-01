@@ -9,7 +9,9 @@ import {
   MapPin,
   Plus,
   Sparkles,
-  Map, // ── NEW
+  Map,
+  Users,
+  BarChart3,
 } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 
@@ -32,9 +34,14 @@ const navLinks = [
     badge: 'count',
   },
   {
-    to: '/map',          // ── NEW
-    label: 'Map View',   // ── NEW
-    icon: Map,           // ── NEW
+    to: '/map',
+    label: 'Map View',
+    icon: Map,
+  },
+  {
+    to: '/reports',
+    label: 'Reports',
+    icon: BarChart3,
   },
   {
     to: '/assistant',
@@ -45,6 +52,11 @@ const navLinks = [
     to: '/admins',
     label: 'Admins',
     icon: ShieldCheck,
+  },
+  {
+    to: '/users',
+    label: 'Customers & Reviews',
+    icon: Users,
   },
   {
     to: '/settings',
@@ -162,7 +174,12 @@ export default function Sidebar({ onCloseMobile, guesthouseCount = 0 }: SidebarP
       {/* User Profile Card */}
       <div className="p-3 border-t border-white/[0.07] bg-black/20">
         <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.07] border border-white/[0.06] transition-colors">
-          <div className="flex items-center gap-2.5 min-w-0">
+          <NavLink
+            to="/profile"
+            onClick={onCloseMobile}
+            title="View profile"
+            className="flex items-center gap-2.5 min-w-0 flex-1"
+          >
             <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#845A32] to-[#B58752] flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">
               {getInitials(user?.displayName || 'Ontiretse Bagwasi')}
             </div>
@@ -174,7 +191,7 @@ export default function Sidebar({ onCloseMobile, guesthouseCount = 0 }: SidebarP
                 {user?.email || 'onty@micasa.com'}
               </p>
             </div>
-          </div>
+          </NavLink>
           <button
             onClick={handleLogout}
             title="Log Out"
