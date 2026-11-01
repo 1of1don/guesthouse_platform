@@ -1,0 +1,394 @@
+/* =====================================================
+   MI CASA ES SU CASA SPLASH SCREEN
+===================================================== */
+
+.splash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+
+  display: grid;
+  place-items: center;
+
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+
+  overflow: hidden;
+
+  color: #ffffff;
+
+  background:
+    radial-gradient(
+      circle at 20% 20%,
+      rgba(255, 255, 255, 0.2),
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at 80% 85%,
+      rgba(255, 255, 255, 0.12),
+      transparent 32%
+    ),
+    linear-gradient(
+      145deg,
+      #082f73 0%,
+      #0d47a1 35%,
+      #1565c0 62%,
+      #0288d1 100%
+    );
+
+  animation: splashExit 0.45s ease 1.8s forwards;
+}
+
+.splash-content {
+  position: relative;
+  z-index: 2;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  width: min(90%, 380px);
+  padding: 30px;
+
+  text-align: center;
+
+  animation: splashContentEnter 0.7s ease both;
+}
+
+.splash-logo {
+  display: grid;
+  place-items: center;
+
+  width: 94px;
+  height: 94px;
+  margin-bottom: 18px;
+
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 27px;
+
+  background: rgba(255, 255, 255, 0.19);
+
+  box-shadow:
+    0 18px 45px rgba(0, 34, 85, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+
+  animation: splashLogoFloat 2s ease-in-out infinite;
+}
+
+.splash-roof {
+  color: #ffffff;
+  font-size: 56px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.splash-content h1 {
+  margin: 0;
+
+  color: #ffffff;
+
+  font-size: clamp(32px, 9vw, 40px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -1.2px;
+}
+
+.splash-content > p {
+  margin: 4px 0 0;
+
+  color: rgba(255, 255, 255, 0.96);
+
+  font-size: clamp(21px, 6vw, 27px);
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.splash-tagline {
+  margin-top: 14px;
+
+  color: rgba(255, 255, 255, 0.78);
+
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.9px;
+}
+
+.splash-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  height: 20px;
+  margin-top: 38px;
+}
+
+.splash-loader span {
+  display: block;
+
+  width: 8px;
+  height: 8px;
+
+  border-radius: 50%;
+  background: #ffffff;
+
+  animation: splashDot 1s ease-in-out infinite;
+}
+
+.splash-loader span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.splash-loader span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.splash-decoration {
+  position: absolute;
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+
+  background: rgba(255, 255, 255, 0.07);
+
+  pointer-events: none;
+}
+
+.splash-decoration-one {
+  top: -90px;
+  right: -75px;
+
+  width: 240px;
+  height: 240px;
+}
+
+.splash-decoration-two {
+  bottom: -130px;
+  left: -90px;
+
+  width: 310px;
+  height: 310px;
+}
+
+@keyframes splashContentEnter {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes splashExit {
+  from {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  to {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+@keyframes splashLogoFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+@keyframes splashDot {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0) scale(0.9);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateY(-6px) scale(1.1);
+  }
+}
+
+/* =====================================================
+   ACCOMMODATION SKELETON LOADING SCREEN
+===================================================== */
+
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.skeleton-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  min-height: 102px;
+
+  cursor: default;
+  pointer-events: none;
+}
+
+.skeleton {
+  position: relative;
+
+  overflow: hidden;
+
+  border-radius: 8px;
+
+  background: rgba(120, 130, 145, 0.2);
+}
+
+.skeleton::after {
+  position: absolute;
+  inset: 0;
+
+  content: "";
+
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.15) 30%,
+    rgba(255, 255, 255, 0.64) 50%,
+    rgba(255, 255, 255, 0.15) 70%,
+    transparent 100%
+  );
+
+  transform: translateX(-100%);
+
+  animation: skeletonShimmer 1.35s ease-in-out infinite;
+}
+
+.skeleton-image {
+  flex: 0 0 92px;
+
+  width: 92px;
+  height: 78px;
+
+  border-radius: 14px;
+}
+
+.skeleton-details {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 9px;
+
+  min-width: 0;
+}
+
+.skeleton-title {
+  width: 78%;
+  height: 14px;
+}
+
+.skeleton-location {
+  width: 56%;
+  height: 10px;
+}
+
+.skeleton-rating {
+  width: 38%;
+  height: 10px;
+}
+
+.skeleton-price {
+  flex: 0 0 48px;
+
+  width: 48px;
+  height: 14px;
+}
+
+@keyframes skeletonShimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Improve the skeleton appearance in dark themes. */
+.dk .skeleton {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.dk .skeleton::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.04) 30%,
+    rgba(255, 255, 255, 0.18) 50%,
+    rgba(255, 255, 255, 0.04) 70%,
+    transparent 100%
+  );
+}
+
+/* =====================================================
+   SMALL PHONE ADJUSTMENTS
+===================================================== */
+
+@media (max-width: 370px) {
+  .splash-logo {
+    width: 82px;
+    height: 82px;
+    border-radius: 23px;
+  }
+
+  .splash-roof {
+    font-size: 49px;
+  }
+
+  .splash-content {
+    padding: 22px;
+  }
+
+  .skeleton-image {
+    flex-basis: 78px;
+    width: 78px;
+    height: 70px;
+  }
+
+  .skeleton-price {
+    flex-basis: 40px;
+    width: 40px;
+  }
+}
+
+/* =====================================================
+   ACCESSIBILITY: REDUCED MOTION
+===================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-screen {
+    animation: none;
+  }
+
+  .splash-content {
+    animation: none;
+  }
+
+  .splash-logo {
+    animation: none;
+  }
+
+  .splash-loader span {
+    animation: none;
+  }
+
+  .skeleton::after {
+    animation: none;
+  }
+}
