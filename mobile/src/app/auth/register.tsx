@@ -8,6 +8,7 @@ export default function Register() {
   const router = useRouter();
   const { register } = useAuth();
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -16,7 +17,7 @@ export default function Register() {
   const submit = async () => {
     setBusy(true); setError('');
     try {
-      await register(name, email, password);
+      await register(name, username, email, password);
       router.dismissAll();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong. Try again.');
@@ -28,6 +29,7 @@ export default function Register() {
       <Text style={styles.title}>Create an account</Text>
       <Text style={styles.sub}>Save favourites and rate the guesthouses you visit</Text>
       <TextInput style={styles.input} placeholder="Full name" placeholderTextColor={colors.muted} value={name} onChangeText={setName} />
+      <TextInput style={styles.input} placeholder="Username" placeholderTextColor={colors.muted} value={username} onChangeText={setUsername} autoCapitalize="none" autoCorrect={false} />
       <TextInput style={styles.input} placeholder="Email address" placeholderTextColor={colors.muted} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
       <TextInput style={styles.input} placeholder="Password" placeholderTextColor={colors.muted} value={password} onChangeText={setPassword} secureTextEntry />
       {!!error && <Text style={styles.error}>{error}</Text>}

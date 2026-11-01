@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GuesthouseCard } from '../../components/GuesthouseCard';
+import { GuesthouseListSkeleton } from '../../components/GuesthouseCardSkeleton';
 import { SortBar } from '../../components/SortBar';
 import { listGuesthouses } from '../../services/guesthouses';
 import { colors, radius } from '../../theme';
@@ -30,6 +31,12 @@ export default function Explore() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
+  // Starting (or ending) a search goes back to the default: cheapest first.
+  const onChangeQuery = (text: string) => {
+    if ((query === '') !== (text === '')) setSort('price_asc');
+    setQuery(text);
+  };
+
   const results = useMemo(() => searchGuesthouses(items, query, sort), [items, query, sort]);
 
   return (
@@ -44,12 +51,12 @@ export default function Explore() {
             placeholder="Search by name or location"
             placeholderTextColor={colors.muted}
             value={query}
-            onChangeText={setQuery}
+            onChangeText={onChangeQuery}
             autoCorrect={false}
             returnKeyType="search"
           />
           {query.length > 0 && (
-            <Pressable onPress={() => setQuery('')} hitSlop={8} accessibilityLabel="Clear search">
+            <Pressable onPress={() => onChangeQuery('')} hitSlop={8} accessibilityLabel="Clear search">
               <Ionicons name="close-circle" size={18} color={colors.muted} />
             </Pressable>
           )}
@@ -58,7 +65,7 @@ export default function Explore() {
       <SortBar value={sort} onChange={setSort} />
 
       {loading ? (
-        <ActivityIndicator style={{ marginTop: 40 }} color={colors.ink} />
+        <GuesthouseListSkeleton />
       ) : error ? (
         <View style={styles.center}>
           <Text style={styles.message}>{error}</Text>

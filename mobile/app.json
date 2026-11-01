@@ -42,7 +42,15 @@
           "locationWhenInUsePermission": "Mi Casa Es Su Casa uses your location to show prices in your local currency."
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Mi Casa Es Su Casa uses your photos to set a profile picture.",
+          "cameraPermission": "Mi Casa Es Su Casa uses your camera to take a profile picture.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

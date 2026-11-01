@@ -1,8 +1,9 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GuesthouseCard } from '../../components/GuesthouseCard';
+import { GuesthouseListSkeleton } from '../../components/GuesthouseCardSkeleton';
 import { useAuth } from '../../context/AuthContext';
 import { listGuesthouses } from '../../services/guesthouses';
 import { colors, radius } from '../../theme';
@@ -32,7 +33,7 @@ export default function Saved() {
           </Pressable>
         </View>
       ) : loading ? (
-        <ActivityIndicator style={{ marginTop: 40 }} color={colors.ink} />
+        <GuesthouseListSkeleton />
       ) : (
         <FlatList
           data={saved}
