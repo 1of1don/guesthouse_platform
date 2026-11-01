@@ -6,7 +6,7 @@ import { ActivityIndicator, FlatList, Linking, Pressable, ScrollView, StyleSheet
 import { RatingStars } from '../../components/RatingStars';
 import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
-import { getGuesthouse, getMyReview, getReviews, submitReview } from '../../services/guesthouses';
+import { getMyReview, getReviews, submitReview, watchGuesthouse } from '../../services/guesthouses';
 import { colors, radius } from '../../theme';
 import { Guesthouse, Review } from '../../types';
 
@@ -28,19 +28,26 @@ export default function GuesthouseDetails() {
 
   const load = useCallback(async () => {
     try {
-      setError('');
-      const [gh, rv] = await Promise.all([getGuesthouse(id), getReviews(id)]);
-      if (!gh) { setError('This guesthouse is no longer listed.'); return; }
-      setG(gh); setReviews(rv);
+      const rv = await getReviews(id);
+      setReviews(rv);
       if (customer) {
         const mine = await getMyReview(id, customer.id);
         if (mine) { setScore(mine.score); setComment(mine.comment); }
       }
     } catch {
       setError('Could not load this guesthouse. Check your connection and try again.');
-    } finally { setLoading(false); }
+    }
   }, [id, customer]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => watchGuesthouse(id, (item) => {
+    setG(item);
+    setLoading(false);
+    setError(item ? '' : 'This guesthouse is no longer listed.');
+    if (item) void load();
+  }, () => {
+    setG(null);
+    setLoading(false);
+    setError('Could not load this guesthouse. Check your connection and try again.');
+  }), [id, load]);
 
   const requireLogin = () => router.push('/auth/login');
   const isFav = !!g && favouriteIds.includes(g.id);

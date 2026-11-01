@@ -4,7 +4,7 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, Vi
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GuesthouseCard } from '../../components/GuesthouseCard';
 import { SortBar } from '../../components/SortBar';
-import { listGuesthouses } from '../../services/guesthouses';
+import { listGuesthouses, watchGuesthouses } from '../../services/guesthouses';
 import { colors, radius } from '../../theme';
 import { Guesthouse, SortKey } from '../../types';
 import { searchGuesthouses } from '../../utils/search';
@@ -28,7 +28,15 @@ export default function Explore() {
       setRefreshing(false);
     }
   }, []);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => watchGuesthouses((data) => {
+    setItems(data);
+    setError(null);
+    setLoading(false);
+  }, () => {
+    setItems([]);
+    setError('Could not load guesthouses. Check your connection and try again.');
+    setLoading(false);
+  }), []);
 
   const results = useMemo(() => searchGuesthouses(items, query, sort), [items, query, sort]);
 

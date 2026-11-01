@@ -123,7 +123,8 @@ function toGuesthouse(id: string, data: DocumentData): Guesthouse {
     gallery: stringList(data.galleryUrls ?? data.gallery),
     createdAt: createdAt?.toISOString() || new Date().toISOString(),
     // ── NEW: read status from Firestore; default to 'active' if not set ──
-    status: data.status === 'suspended' ? 'suspended' : 'active',
+    isSuspended: typeof data.isSuspended === 'boolean' ? data.isSuspended : data.status === 'suspended',
+    status: (typeof data.isSuspended === 'boolean' ? data.isSuspended : data.status === 'suspended') ? 'suspended' : 'active',
   };
 }
 
@@ -140,7 +141,8 @@ function guesthouseFields(data: Partial<Guesthouse>) {
     longitude: data.coordinates?.lng ?? 25.9231,
     pricePerNight: data.pricePerNight ?? 0,
     // ── NEW: persist status when creating/updating a guesthouse ──
-    status: data.status ?? 'active',
+    isSuspended: data.isSuspended ?? (data.status === 'suspended'),
+    status: (data.isSuspended ?? (data.status === 'suspended')) ? 'suspended' : 'active',
   };
 }
 
@@ -360,7 +362,8 @@ export const api = {
       logo: fallbackLogo,
       gallery: fallbackGallery.length ? fallbackGallery : ['https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=800&q=80'],
       createdAt: nowIso,
-      status: 'active', // ── NEW: new guesthouses are active by default
+      isSuspended: data.isSuspended ?? (data.status === 'suspended'),
+      status: (data.isSuspended ?? (data.status === 'suspended')) ? 'suspended' : 'active',
     };
 
     setLocalData(STORAGE_KEYS.GUESTHOUSES, [newRecord, ...localList]);
@@ -389,8 +392,10 @@ export const api = {
         images,
         current.gallery ?? [],
       );
+      // Only the suspend action changes visibility, including during photo uploads.
+      const { isSuspended: _isSuspended, status: _status, ...editableFields } = guesthouseFields(data);
       await updateDoc(guesthouseRef, {
-        ...guesthouseFields(data),
+        ...editableFields,
         ...imageFields,
       });
       return;
@@ -409,6 +414,8 @@ export const api = {
         return {
           ...item,
           ...data,
+          isSuspended: item.isSuspended ?? (item.status === 'suspended'),
+          status: (item.isSuspended ?? (item.status === 'suspended')) ? 'suspended' : 'active',
           logo,
           gallery: [...(item.gallery || []), ...addedGallery],
         };
@@ -451,18 +458,17 @@ export const api = {
 
     // Update Firestore if configured
     if (isFirebaseConfigured && db) {
-      try {
-        await updateDoc(doc(db, 'guesthouses', id), { status: newStatus });
-      } catch (err) {
-        console.warn('Firestore suspend failed, updating local cache:', err);
-      }
+      await updateDoc(doc(db, 'guesthouses', id), {
+        isSuspended: suspend,
+        status: newStatus,
+      });
     }
 
     // Always update localStorage (keeps UI in sync even without Firebase)
     const list = getLocalData<Guesthouse[]>(STORAGE_KEYS.GUESTHOUSES, INITIAL_GUESTHOUSES);
     setLocalData(
       STORAGE_KEYS.GUESTHOUSES,
-      list.map((g) => (g._id === id ? { ...g, status: newStatus } : g)),
+      list.map((g) => (g._id === id ? { ...g, isSuspended: suspend, status: newStatus } : g)),
     );
   },
 
