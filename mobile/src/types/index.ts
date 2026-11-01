@@ -27,6 +27,12 @@ export type Review = {
   createdAt: number;
 };
 
-export type Customer = { id: string; name: string; email: string };
+export type Customer = {
+  id: string;
+  name: string;
+  email: string;
+  username?: string; // missing on accounts created before usernames existed
+  photoUrl?: string; // small base64 data URI stored in customers/{uid}
+};
 
 export type SortKey = 'price_asc' | 'price_desc' | 'rating_desc' | 'rating_asc';

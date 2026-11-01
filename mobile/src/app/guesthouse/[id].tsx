@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { GuesthouseDetailsSkeleton } from '../../components/GuesthouseDetailsSkeleton';
 import { RatingStars } from '../../components/RatingStars';
 import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
@@ -57,7 +58,7 @@ export default function GuesthouseDetails() {
     finally { setSaving(false); }
   };
 
-  if (loading) return <ActivityIndicator style={{ marginTop: 60 }} color={colors.ink} />;
+  if (loading) return <GuesthouseDetailsSkeleton />;
   if (error || !g) return <Text style={[styles.muted, { padding: 32, textAlign: 'center' }]}>{error}</Text>;
 
   const openMaps = () =>

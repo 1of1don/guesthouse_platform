@@ -5,9 +5,12 @@ import { Customer } from '../types';
 
 type Ctx = {
   customer: Customer | null;
+  // True until Firebase has restored (or ruled out) a saved session on launch.
+  loading: boolean;
   favouriteIds: string[];
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, username: string, email: string, password: string) => Promise<void>;
+  updatePhoto: (dataUri: string) => Promise<void>;
   logout: () => void;
   // Returns false when logged out so the caller can send the user to log in.
   toggleFavourite: (guesthouseId: string) => Promise<boolean>;
@@ -16,6 +19,7 @@ const AuthContext = createContext<Ctx | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [customer, setCustomer] = useState<Customer | null>(null);
+  const [loading, setLoading] = useState(true);
   const [favouriteIds, setFavouriteIds] = useState<string[]>([]);
 
   const start = useCallback(async (c: Customer) => {
@@ -25,14 +29,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Restores a saved session on launch and follows log in / log out.
   useEffect(
-    () => authService.onCustomerChanged((c) => (c ? start(c) : (setCustomer(null), setFavouriteIds([])))),
+    () =>
+      authService.onCustomerChanged((c) => {
+        if (c) start(c);
+        else { setCustomer(null); setFavouriteIds([]); }
+        setLoading(false);
+      }),
     [start],
   );
 
   const value = useMemo<Ctx>(() => ({
-    customer, favouriteIds,
+    customer, loading, favouriteIds,
     login: async (e, p) => start(await authService.login(e, p)),
-    register: async (n, e, p) => start(await authService.register(n, e, p)),
+    register: async (n, u, e, p) => start(await authService.register(n, u, e, p)),
+    updatePhoto: async (dataUri) => {
+      const url = await authService.updateProfilePhoto(dataUri);
+      setCustomer((c) => (c ? { ...c, photoUrl: url } : c));
+    },
     logout: () => { authService.logout(); setCustomer(null); setFavouriteIds([]); },
     toggleFavourite: async (id) => {
       if (!customer) return false;
@@ -40,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setFavouriteIds((prev) => (nowFav ? [...prev, id] : prev.filter((x) => x !== id)));
       return true;
     },
-  }), [customer, favouriteIds, start]);
+  }), [customer, loading, favouriteIds, start]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
