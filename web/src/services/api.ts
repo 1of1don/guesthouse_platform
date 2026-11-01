@@ -1,5 +1,3 @@
-
-
 import {
   collection,
   deleteDoc,
@@ -124,6 +122,8 @@ function toGuesthouse(id: string, data: DocumentData): Guesthouse {
     logo: data.logoUrl ?? data.logo ?? '',
     gallery: stringList(data.galleryUrls ?? data.gallery),
     createdAt: createdAt?.toISOString() || new Date().toISOString(),
+    // ── NEW: read status from Firestore; default to 'active' if not set ──
+    status: data.status === 'suspended' ? 'suspended' : 'active',
   };
 }
 
@@ -139,6 +139,8 @@ function guesthouseFields(data: Partial<Guesthouse>) {
     latitude: data.coordinates?.lat ?? -24.6282,
     longitude: data.coordinates?.lng ?? 25.9231,
     pricePerNight: data.pricePerNight ?? 0,
+    // ── NEW: persist status when creating/updating a guesthouse ──
+    status: data.status ?? 'active',
   };
 }
 
@@ -287,7 +289,7 @@ export const api = {
   },
 
  
-  // 3. GET SINGLE GUESTHOUSE BY ID
+  // GET SINGLE GUESTHOUSE BY ID
   // Used by the Edit page to load existing data for a guesthouse
  
   getGuesthouse: async (id: string): Promise<Guesthouse> => {
@@ -308,7 +310,7 @@ export const api = {
   },
 
  
-  // 4. CREATE NEW GUESTHOUSE
+  // CREATE NEW GUESTHOUSE
   // Adds a new guesthouse record with optional logo and gallery files
  
   createGuesthouse: async (
@@ -358,6 +360,7 @@ export const api = {
       logo: fallbackLogo,
       gallery: fallbackGallery.length ? fallbackGallery : ['https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=800&q=80'],
       createdAt: nowIso,
+      status: 'active', // ── NEW: new guesthouses are active by default
     };
 
     setLocalData(STORAGE_KEYS.GUESTHOUSES, [newRecord, ...localList]);
@@ -365,7 +368,7 @@ export const api = {
   },
 
  
-  // 5. UPDATE EXISTING GUESTHOUSE
+  // UPDATE EXISTING GUESTHOUSE
   // Saves edits made on the Edit page back to the database
  
   updateGuesthouse: async (
@@ -416,7 +419,7 @@ export const api = {
   },
 
  
-  // 6. DELETE GUESTHOUSE
+  // DELETE GUESTHOUSE
   // Deletes the guesthouse record immediately and cleans up photos afterward.
  
   deleteGuesthouse: async (id: string): Promise<void> => {
@@ -435,6 +438,31 @@ export const api = {
     setLocalData(
       STORAGE_KEYS.GUESTHOUSES,
       list.filter((g) => g._id !== id),
+    );
+  },
+
+  // ── NEW ──────────────────────────────────────────────────────────────────────
+  // SUSPEND / ACTIVATE GUESTHOUSE
+  // Sets status to 'suspended' (hidden from mobile app) or 'active' (visible).
+  // Does NOT delete any data — the listing can be reactivated at any time.
+  // ─────────────────────────────────────────────────────────────────────────────
+  suspendGuesthouse: async (id: string, suspend: boolean): Promise<void> => {
+    const newStatus: 'active' | 'suspended' = suspend ? 'suspended' : 'active';
+
+    // Update Firestore if configured
+    if (isFirebaseConfigured && db) {
+      try {
+        await updateDoc(doc(db, 'guesthouses', id), { status: newStatus });
+      } catch (err) {
+        console.warn('Firestore suspend failed, updating local cache:', err);
+      }
+    }
+
+    // Always update localStorage (keeps UI in sync even without Firebase)
+    const list = getLocalData<Guesthouse[]>(STORAGE_KEYS.GUESTHOUSES, INITIAL_GUESTHOUSES);
+    setLocalData(
+      STORAGE_KEYS.GUESTHOUSES,
+      list.map((g) => (g._id === id ? { ...g, status: newStatus } : g)),
     );
   },
 
