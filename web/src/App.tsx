@@ -10,7 +10,6 @@ import Guesthouses from './pages/Guesthouses';
 import AddEditGuesthouse from './pages/AddEditGuesthouse';
 import AdminUsers from './pages/AdminUsers';
 import Settings from './pages/Settings';
-import Assistant from './pages/Assistant';
 import MapView from './pages/MapView';
 import UserManagement from './pages/UserManagement';
 import Reports from './pages/Reports';
@@ -86,7 +85,6 @@ export default function App() {
               <Route path="/reports" element={<Reports />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/settings" element={<Settings />} />
-              <Route path="/assistant" element={<Assistant />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

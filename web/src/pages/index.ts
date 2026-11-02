@@ -5,7 +5,6 @@ export { default as AdminUsers } from './AdminUsers';
 export { default as Settings } from './Settings';
 export { default as Login } from './Login';
 export { default as Signup } from './Signup';
-export { default as Assistant } from './Assistant';
 export { default as UserManagement } from './UserManagement';
 export { default as Reports } from './Reports';
 export { default as Profile } from './Profile';

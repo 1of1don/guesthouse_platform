@@ -8,7 +8,6 @@ import {
   LogOut,
   MapPin,
   Plus,
-  Sparkles,
   Map,
   Users,
   BarChart3,
@@ -42,11 +41,6 @@ const navLinks = [
     to: '/reports',
     label: 'Reports',
     icon: BarChart3,
-  },
-  {
-    to: '/assistant',
-    label: 'AI Concierge',
-    icon: Sparkles,
   },
   {
     to: '/admins',
