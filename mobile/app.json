@@ -8,7 +8,7 @@
     "scheme": "micasa",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/icon.png",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Mi Casa Es Su Casa uses your location to show prices in your local currency."
       }
@@ -17,7 +17,7 @@
       "package": "com.micasa.essucasa",
       "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#4AA8E9",
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundImage": "./assets/images/android-icon-background.png"
       },
@@ -36,9 +36,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#3B9BDF",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 160
         }
       ],
       [
@@ -47,7 +47,15 @@
           "locationWhenInUsePermission": "Mi Casa Es Su Casa uses your location to show prices in your local currency."
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Mi Casa Es Su Casa uses your photos to set a profile picture.",
+          "cameraPermission": "Mi Casa Es Su Casa uses your camera to take a profile picture.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
