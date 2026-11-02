@@ -10,7 +10,7 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
-    // Suspended customers can still browse, they just can't rate or review
+    // Suspended customers can still browse, they just can't save, rate or review
     function notSuspended() {
       let customer = /databases/$(database)/documents/customers/$(request.auth.uid);
       return !exists(customer) || get(customer).data.get('isSuspended', false) == false;
@@ -62,8 +62,10 @@ service cloud.firestore {
         || (isAdmin() && changedOnly(['isSuspended', 'suspendedAt']));
       allow delete: if isOwner() || isAdmin();
 
+      // Suspended customers can still see and remove saves, but can't add new ones
       match /favourites/{guesthouseId} {
-        allow read, write: if signedIn() && request.auth.uid == uid;
+        allow read, delete: if isOwner();
+        allow create, update: if isOwner() && notSuspended();
       }
     }
 
