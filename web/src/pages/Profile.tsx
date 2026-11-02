@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import {
   EmailAuthProvider,
   reauthenticateWithCredential,
@@ -65,6 +65,8 @@ export default function Profile() {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(user?.displayName ?? '');
   const [nameError, setNameError] = useState('');
+  const [phone, setPhone] = useState('');
+  const [savedPhone, setSavedPhone] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
 
   // Security
@@ -74,6 +76,18 @@ export default function Profile() {
   const [showPasswords, setShowPasswords] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState<PasswordErrors>({});
   const [savingPassword, setSavingPassword] = useState(false);
+
+  // The phone number lives on the admin's document in Firestore, so load it once.
+  useEffect(() => {
+    if (!db || !user) return;
+    getDoc(doc(db, 'admins', user.uid))
+      .then((snap) => {
+        const value = snap.data()?.phone ?? '';
+        setPhone(value);
+        setSavedPhone(value);
+      })
+      .catch(() => undefined);
+  }, [user?.uid]);
 
   if (!user) return null;
 
@@ -85,6 +99,7 @@ export default function Profile() {
 
   const cancelEditing = () => {
     setName(user.displayName);
+    setPhone(savedPhone);
     setNameError('');
     setEditing(false);
   };
@@ -96,7 +111,8 @@ export default function Profile() {
       setNameError('Full name is required');
       return;
     }
-    if (trimmed === user.displayName) {
+    const trimmedPhone = phone.trim();
+    if (trimmed === user.displayName && trimmedPhone === savedPhone) {
       setEditing(false);
       return;
     }
@@ -105,7 +121,8 @@ export default function Profile() {
     setSavingProfile(true);
     try {
       if (!db || !auth?.currentUser) throw new Error('You are not connected to Firebase.');
-      await updateDoc(doc(db, 'admins', user.uid), { name: trimmed });
+      await updateDoc(doc(db, 'admins', user.uid), { name: trimmed, phone: trimmedPhone });
+      setSavedPhone(trimmedPhone);
       await updateProfile(auth.currentUser, { displayName: trimmed }).catch(() => undefined);
       updateDisplayName(trimmed);
       setEditing(false);
@@ -126,6 +143,9 @@ export default function Profile() {
     const errors: PasswordErrors = {};
     if (!currentPassword) errors.current = 'Enter your current password';
     if (newPassword.length < 8) errors.next = 'Use at least 8 characters';
+    else if (!/[0-9]/.test(newPassword) || !/[^A-Za-z0-9]/.test(newPassword)) {
+      errors.next = 'Include a number and a special character';
+    }
     else if (newPassword === currentPassword) errors.next = 'New password must be different';
     if (confirmPassword !== newPassword) errors.confirm = 'Passwords do not match';
     setPasswordErrors(errors);
@@ -232,11 +252,20 @@ export default function Profile() {
           <Field label="Role">
             <input type="text" value={user.role} readOnly className={inputClass(false, true)} />
           </Field>
-          <div className="sm:col-span-2">
-            <Field label="Email address" hint="Your email is your login and can't be changed here.">
-              <input type="email" value={user.email} readOnly className={inputClass(false, true)} />
-            </Field>
-          </div>
+          <Field label="Email address" hint="Your email is your login and can't be changed here.">
+            <input type="email" value={user.email} readOnly className={inputClass(false, true)} />
+          </Field>
+          <Field label="Phone number" hint="Include your country code when adding a phone number.">
+            <input
+              type="tel"
+              value={phone}
+              placeholder="+267 7xxxxxxx"
+              onChange={(e) => setPhone(e.target.value)}
+              readOnly={!editing}
+              disabled={savingProfile}
+              className={inputClass(false, !editing)}
+            />
+          </Field>
         </div>
 
         {editing && (
@@ -280,7 +309,7 @@ export default function Profile() {
             />
           </Field>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="New password" error={passwordErrors.next} hint="At least 8 characters.">
+            <Field label="New password" error={passwordErrors.next} hint="Use at least 8 characters, including a number and a special character.">
               <input
                 type={showPasswords ? 'text' : 'password'}
                 value={newPassword}
