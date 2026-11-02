@@ -11,15 +11,9 @@ import {
   updateDoc,
   type DocumentData,
 } from 'firebase/firestore';
-import {
-  deleteObject,
-  getDownloadURL,
-  listAll,
-  ref,
-  uploadBytes,
-  type StorageReference,
-} from 'firebase/storage';
-import { db, isFirebaseConfigured, storage } from '../firebase';
+import { deleteApp, initializeApp } from 'firebase/app';
+import { createUserWithEmailAndPassword, getAuth, signOut } from 'firebase/auth';
+import { app, db, isFirebaseConfigured } from '../firebase';
 import type { AdminUser, CityPriceStat, Customer, DashboardStats, Guesthouse, Review } from '../types';
 
 // Helper type for image uploads from the Add/Edit form
@@ -166,33 +160,34 @@ function guesthouseFields(data: Partial<Guesthouse>) {
   };
 }
 
-// Uploads a single image file to Firebase Storage
+// Cloudinary settings come from web/.env (see .env.example).
+// An "unsigned" upload preset lets the browser upload without a secret key.
+const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || '';
+const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || '';
+
+// Uploads one image to Cloudinary and returns its public web address.
 async function uploadImage(
   guesthouseId: string,
   category: 'logo' | 'gallery',
   file: File,
 ): Promise<string> {
-  if (!storage) {
-    throw new Error('Firebase Storage is not configured. Configure Storage before uploading guesthouse photos.');
+  if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
+    throw new Error('Photo uploads are not set up. Add the Cloudinary values to web/.env and restart.');
   }
-  const imageRef = ref(
-    storage,
-    `guesthouses/${guesthouseId}/${category}/${crypto.randomUUID()}`,
-  );
-  const result = await uploadBytes(imageRef, file, {
-    contentType: file.type,
-  });
-  return getDownloadURL(result.ref);
-}
+  const form = new FormData();
+  form.append('file', file);
+  form.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+  form.append('folder', `guesthouses/${guesthouseId}/${category}`);
 
-// Deletes uploaded images after the guesthouse document has been removed.
-async function deleteStorageContents(directory: StorageReference) {
-  if (!storage) return;
-  const contents = await listAll(directory);
-  await Promise.all([
-    ...contents.items.map((item) => deleteObject(item)),
-    ...contents.prefixes.map((prefix) => deleteStorageContents(prefix)),
-  ]);
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+    { method: 'POST', body: form },
+  );
+  const result = await response.json();
+  if (!response.ok) {
+    throw new Error(result?.error?.message || 'Could not upload the photo.');
+  }
+  return result.secure_url as string;
 }
 
 // Uploads both the logo and multiple gallery images
@@ -382,10 +377,6 @@ export const api = {
       return guesthouseRef.id;
     }
 
-    if (images.logo || images.gallery?.length) {
-      throw new Error('Guesthouse photos require a configured Firebase Storage connection.');
-    }
-
     // LocalStorage fallback path
     const localList = getLocalData<Guesthouse[]>(STORAGE_KEYS.GUESTHOUSES, INITIAL_GUESTHOUSES);
     const fallbackLogo = images.logo
@@ -449,10 +440,6 @@ export const api = {
       return;
     }
 
-    if (images.logo || images.gallery?.length) {
-      throw new Error('Guesthouse photos require a configured Firebase Storage connection.');
-    }
-
     // LocalStorage fallback
     const list = getLocalData<Guesthouse[]>(STORAGE_KEYS.GUESTHOUSES, INITIAL_GUESTHOUSES);
     const updated = list.map((item) => {
@@ -479,13 +466,9 @@ export const api = {
  
   deleteGuesthouse: async (id: string): Promise<void> => {
     if (isFirebaseConfigured && db) {
+      // Photos stay in Cloudinary. Deleting them needs the secret API key,
+      // which must never be in the browser, so remove them from the Cloudinary console if needed.
       await deleteDoc(doc(db, 'guesthouses', id));
-
-      if (storage) {
-        void deleteStorageContents(ref(storage, `guesthouses/${id}`)).catch((err) => {
-          console.error(`Unable to delete photos for guesthouse "${id}":`, err);
-        });
-      }
     }
 
     // Remove from LocalStorage
@@ -548,9 +531,36 @@ export const api = {
   },
 
  
-  // Adds a new administrator during a live demo presentation
- 
-  createAdmin: async (admin: Omit<AdminUser, '_id'>): Promise<AdminUser> => {
+  // Adds a new administrator WITH a real login (email + temporary password).
+  // A second, temporary Firebase connection creates the account, so the admin
+  // who is doing this stays logged in. Then admins/{new uid} gives them access.
+
+  createAdmin: async (admin: Omit<AdminUser, '_id'>, password: string): Promise<AdminUser> => {
+    if (isFirebaseConfigured && db && app) {
+      if (password.length < 8) throw new Error('The temporary password must be at least 8 characters.');
+      const helperApp = initializeApp(app.options, `create-admin-${Date.now()}`);
+      try {
+        const helperAuth = getAuth(helperApp);
+        const cred = await createUserWithEmailAndPassword(helperAuth, admin.email.trim(), password);
+        await signOut(helperAuth);
+        await setDoc(doc(db, 'admins', cred.user.uid), {
+          name: admin.name.trim(),
+          email: admin.email.trim(),
+          role: admin.role,
+          createdAt: serverTimestamp(),
+        });
+        return { ...admin, _id: cred.user.uid, status: 'Active', createdAt: new Date().toISOString() };
+      } catch (err) {
+        const code = (err as { code?: string })?.code;
+        if (code === 'auth/email-already-in-use') throw new Error('An account with this email already exists.');
+        if (code === 'auth/invalid-email') throw new Error('That email address does not look right.');
+        throw err;
+      } finally {
+        void deleteApp(helperApp);
+      }
+    }
+
+    // No Firebase (local demo mode): keep the record in this browser only.
     const newAdmin: AdminUser = {
       _id: `adm-${Date.now().toString(36)}`,
       name: admin.name,
@@ -559,18 +569,6 @@ export const api = {
       status: 'Active',
       createdAt: new Date().toISOString(),
     };
-    if (isFirebaseConfigured && db) {
-      try {
-        await setDoc(doc(db, 'admins', newAdmin._id), {
-          name: newAdmin.name,
-          email: newAdmin.email,
-          role: newAdmin.role,
-          createdAt: serverTimestamp(),
-        });
-      } catch (err) {
-        console.warn('Firestore admin save failed, stored locally:', err);
-      }
-    }
     const current = getLocalData<AdminUser[]>(STORAGE_KEYS.ADMINS, INITIAL_ADMINS);
     setLocalData(STORAGE_KEYS.ADMINS, [newAdmin, ...current]);
     return newAdmin;

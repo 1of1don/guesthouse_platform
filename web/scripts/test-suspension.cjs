@@ -41,7 +41,7 @@ const stored = new Map();
 const cache = new Map();
 function load(relative) {
   const filename = path.resolve(__dirname, relative);
-  const code = transformSync(readFileSync(filename, 'utf8'), { loader: 'ts', format: 'cjs' }).code;
+  const code = transformSync(readFileSync(filename, 'utf8'), { loader: 'ts', format: 'cjs', define: { 'import.meta.env': '{}' } }).code;
   const module = { exports: {} };
   vm.runInNewContext(code, {
     module, exports: module.exports, console,

@@ -19,6 +19,7 @@ import { useSettings } from '../context/SettingsContext';
 import LoadingButton from '../components/ui/LoadingButton';
 import Spinner from '../components/ui/Spinner';
 import { useToast } from '../components/ui/Toast';
+import { withTimeout } from '../utils/withTimeout';
 
 // City presets for Botswana with accurate GPS coordinates
 const CITY_PRESETS: Record<string, { lat: number; lng: number }> = {
@@ -46,6 +47,7 @@ const POPULAR_AMENITIES = [
 ];
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const SAVE_TIME_LIMIT_MS = 20_000; // 20 seconds
 const ACCEPTED_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 
 const isAcceptedImage = (file: File) =>
@@ -220,11 +222,11 @@ export default function AddEditGuesthouse() {
 
     try {
       const images = { logo: logoFile, gallery: galleryFiles };
-      if (id) {
-        await api.updateGuesthouse(id, form, images);
-      } else {
-        await api.createGuesthouse(form, images);
-      }
+      const save: Promise<unknown> = id
+        ? api.updateGuesthouse(id, form, images)
+        : api.createGuesthouse(form, images);
+      // Stop waiting after 20 seconds so the page never spins forever.
+      await withTimeout(save, SAVE_TIME_LIMIT_MS, 'Failed to upload guesthouse. Please try again.');
       setSuccessToast(true);
       setTimeout(() => {
         navigate('/guesthouses');
@@ -233,7 +235,7 @@ export default function AddEditGuesthouse() {
       setError(
         cause instanceof Error ? cause.message : 'Unable to save guesthouse property.',
       );
-      showToast({ type: 'error', message: "Couldn't save the guesthouse. Please try again." });
+      showToast({ type: 'error', message: 'Failed to upload guesthouse. Please try again.' });
       setSaving(false);
     }
   };
@@ -607,7 +609,7 @@ export default function AddEditGuesthouse() {
                 Room & Garden Photos
               </label>
               <p className="text-[11px] text-[#8F7F70] dark:text-[#9E8E80] mb-2">
-                Upload PNG, JPG, or WEBP files up to 5MB each. Photos are sent to Firebase Storage when you save.
+                Upload PNG, JPG, or WEBP files up to 5MB each. Photos are uploaded to Cloudinary when you save.
               </p>
               <input
                 type="file"
