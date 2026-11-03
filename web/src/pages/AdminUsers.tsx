@@ -24,6 +24,7 @@ export default function AdminUsers() {
     email: '',
     role: 'Admin',
   });
+  const [password, setPassword] = useState(''); // temporary password the new admin logs in with
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -41,10 +42,12 @@ export default function AdminUsers() {
     e.preventDefault();
     setSaving(true);
     try {
-      const created = await api.createAdmin(newAdmin);
+      const created = await api.createAdmin(newAdmin, password);
       setUsers((prev) => [created, ...prev]);
       setShowInviteModal(false);
       setNewAdmin({ name: '', email: '', role: 'Admin' });
+      setPassword('');
+      alert(`${created.name} can now log in with ${created.email} and the temporary password. Ask them to change it on their Profile page.`);
     } catch (err: any) {
       alert(err.message || 'Failed to add administrator.');
     } finally {
@@ -202,6 +205,22 @@ export default function AdminUsers() {
                   placeholder="admin@micasa.com"
                   className="w-full px-3.5 py-2 bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.07] dark:border-white/[0.08] rounded-xl text-[#231A14] dark:text-[#F7F4EF] focus:bg-white dark:focus:bg-[#251E1A] focus:outline-hidden focus:ring-1 focus:ring-[#9E7246]"
                 />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-[#524438] dark:text-[#D4BA9E] mb-1.5">
+                  Temporary password *
+                </label>
+                <input
+                  type="text"
+                  required
+                  minLength={8}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="At least 8 characters"
+                  className="w-full px-3.5 py-2 bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.07] dark:border-white/[0.08] rounded-xl text-[#231A14] dark:text-[#F7F4EF] focus:bg-white dark:focus:bg-[#251E1A] focus:outline-hidden focus:ring-1 focus:ring-[#9E7246]"
+                />
+                <p className="mt-1 text-[11px] text-[#8F7F70]">Share it with them privately. They can change it on their Profile page.</p>
               </div>
 
               <div>

@@ -11,11 +11,14 @@ import {
   List,
   Eye,
   Trash2,
-  PauseCircle,   // NEW
-  PlayCircle,    // NEW
+  PauseCircle,
+  PlayCircle,
 } from 'lucide-react';
 import PropertyCard from '../components/ui/PropertyCard';
 import PropertyDetailModal from '../components/ui/PropertyDetailModal';
+import ConfirmModal from '../components/ui/ConfirmModal';
+import GuesthouseSkeletonGrid from '../components/ui/GuesthouseSkeleton';
+import { useToast } from '../components/ui/Toast';
 import { api } from '../services/api';
 import { useSettings } from '../context/SettingsContext';
 import type { Guesthouse } from '../types';
@@ -32,86 +35,99 @@ export default function Guesthouses() {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [previewProperty, setPreviewProperty] = useState<Guesthouse | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  // ── NEW ──────────────────────────────────────────────────────────────────────
   const [suspendingId, setSuspendingId] = useState<string | null>(null);
-  // ─────────────────────────────────────────────────────────────────────────────
+  const [pending, setPending] = useState<{ kind: 'delete' | 'suspend' | 'activate'; id: string; name: string } | null>(null);
+  const { showToast } = useToast();
 
-  const loadData = () => {
-    setLoading(true);
-    api.getGuesthouses()
-      .then((data) => {
+  // Live list, so a suspend done by another admin (or a new rating) shows without a refresh
+  useEffect(() => {
+    return api.watchGuesthouses(
+      (data) => {
         setItems(data);
         setError('');
-      })
-      .catch((cause: unknown) => {
-        setError(
-          cause instanceof Error ? cause.message : 'Unable to load guesthouses catalog.',
-        );
-      })
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    loadData();
+        setLoading(false);
+      },
+      (cause) => {
+        setError(cause.message || 'Unable to load guesthouses catalog.');
+        setLoading(false);
+      },
+    );
   }, []);
 
-  const handleDelete = async (id: string, name: string) => {
-    if (deletingId) return;
-    if (confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
-      try {
-        setDeletingId(id);
-        await api.deleteGuesthouse(id);
-        setItems((prev) => prev.filter((item) => item._id !== id));
-      } catch (cause) {
-        alert(cause instanceof Error ? cause.message : 'Unable to delete guesthouse.');
-      } finally {
-        setDeletingId(null);
-      }
-    }
-  };
+  // The buttons only open the confirm modal, the work happens in confirmPending
+  const handleDelete = (id: string, name: string) => setPending({ kind: 'delete', id, name });
 
-  // ── NEW ──────────────────────────────────────────────────────────────────────
-  /**
-   * handleSuspend — toggle a guesthouse between 'active' and 'suspended'.
-   *
-   * @param id            The guesthouse's _id
-   * @param name          Display name (used in the confirm dialog)
-   * @param currentStatus The guesthouse's current status string
-   *
-   * How it works:
-   *  1. Ask for confirmation so admins don't suspend by accident.
-   *  2. Call api.suspendGuesthouse() which writes to Firestore (if live) AND
-   *     to localStorage (always), so the UI stays correct in demo mode too.
-   *  3. Optimistically update the local `items` state so the badge/button
-   *     flips immediately — no full page reload needed.
-   */
-  const handleSuspend = async (id: string, name: string, currentStatus: string) => {
-    if (suspendingId) return; // Block concurrent calls
+  const handleSuspend = (id: string, name: string, currentStatus: string) =>
+    setPending({ kind: currentStatus === 'suspended' ? 'activate' : 'suspend', id, name });
 
-    const willSuspend = currentStatus !== 'suspended';
-    const action = willSuspend ? 'suspend' : 'activate';
-
-    if (!confirm(`Are you sure you want to ${action} "${name}"?`)) return;
-
+  // Suspended listings stay here for admins but disappear from the mobile app.
+  // We flip the item locally so the badge changes straight away.
+  const setSuspended = async (id: string, suspend: boolean) => {
+    setSuspendingId(id);
     try {
-      setSuspendingId(id);
-      await api.suspendGuesthouse(id, willSuspend);
-
-      // Update the item in local state — no re-fetch required
+      await api.suspendGuesthouse(id, suspend);
       setItems((prev) =>
         prev.map((g) =>
-          g._id === id
-            ? { ...g, isSuspended: willSuspend, status: willSuspend ? 'suspended' : 'active' }
-            : g,
+          g._id === id ? { ...g, isSuspended: suspend, status: suspend ? 'suspended' : 'active' } : g,
         ),
       );
-    } catch (cause) {
-      alert(cause instanceof Error ? cause.message : `Unable to ${action} guesthouse.`);
     } finally {
       setSuspendingId(null);
     }
   };
-  // ─────────────────────────────────────────────────────────────────────────────
+
+  const confirmPending = async () => {
+    if (!pending || deletingId || suspendingId) return;
+    const { kind, id, name } = pending;
+    try {
+      if (kind === 'delete') {
+        setDeletingId(id);
+        await api.deleteGuesthouse(id);
+        setItems((prev) => prev.filter((item) => item._id !== id));
+        showToast({ type: 'success', message: 'Guesthouse deleted' });
+      } else if (kind === 'suspend') {
+        await setSuspended(id, true);
+        showToast({
+          type: 'info',
+          message: `${name} suspended`,
+          actionLabel: 'Undo',
+          onAction: () => {
+            setSuspended(id, false).catch(() =>
+              showToast({ type: 'error', message: "Couldn't undo. Try activating it instead." }));
+          },
+        });
+      } else {
+        await setSuspended(id, false);
+        showToast({ type: 'success', message: `${name} is live on the mobile app again` });
+      }
+      setPending(null);
+    } catch (cause) {
+      showToast({
+        type: 'error',
+        message: cause instanceof Error ? cause.message : `Couldn't ${kind} guesthouse. Try again.`,
+      });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const modal = pending && {
+    delete: {
+      title: 'Delete guesthouse?',
+      message: "This permanently removes the guesthouse and its photos. This action can't be undone.",
+      confirm: 'Delete', loading: 'Deleting...', variant: 'danger' as const, icon: <Trash2 className="w-5 h-5" />,
+    },
+    suspend: {
+      title: 'Suspend guesthouse?',
+      message: 'Guests on the mobile app won\'t see it until you activate it again. Nothing is deleted.',
+      confirm: 'Suspend', loading: 'Suspending...', variant: 'accent' as const, icon: undefined,
+    },
+    activate: {
+      title: 'Activate guesthouse?',
+      message: 'It will show on the mobile app again straight away.',
+      confirm: 'Activate', loading: 'Activating...', variant: 'accent' as const, icon: <PlayCircle className="w-5 h-5" />,
+    },
+  }[pending.kind];
 
   const allCities = useMemo(() => {
     const set = new Set<string>();
@@ -284,11 +300,7 @@ export default function Guesthouses() {
       )}
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="bg-black/[0.03] dark:bg-white/[0.04] rounded-2xl h-72" />
-          ))}
-        </div>
+        <GuesthouseSkeletonGrid />
       ) : filteredItems.length === 0 ? (
         <div className="glass-panel rounded-3xl p-12 text-center max-w-lg mx-auto shadow-xs">
           <div className="w-12 h-12 rounded-2xl bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.06] dark:border-white/[0.08] text-[#9E7246] dark:text-[#D6A670] flex items-center justify-center mx-auto mb-3">
@@ -330,7 +342,6 @@ export default function Guesthouses() {
               key={guesthouse._id}
               property={guesthouse}
               onPreview={setPreviewProperty}
-              // ── NEW: pass suspend handler and loading flag ──
               onSuspend={handleSuspend}
               suspending={suspendingId === guesthouse._id}
             />
@@ -348,14 +359,13 @@ export default function Guesthouses() {
                   <th className="py-3 px-4">Key Amenities</th>
                   <th className="py-3 px-4 text-right">Price / Night ({currency.code})</th>
                   <th className="py-3 px-4 text-center">Rating</th>
-                  {/* ── NEW: Status column ── */}
                   <th className="py-3 px-4 text-center">Status</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-black/[0.04] dark:divide-white/[0.05]">
                 {filteredItems.map((g) => {
-                  const isSuspended = g.status === 'suspended';
+                  const isSuspended = Boolean(g.isSuspended);
                   const thumb =
                     g.logo ||
                     (g.gallery && g.gallery[0]) ||
@@ -364,7 +374,6 @@ export default function Guesthouses() {
                     <tr
                       key={g._id}
                       className={`hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors group ${
-                        // ── NEW: subtle amber tint on suspended rows
                         isSuspended ? 'bg-amber-50/40 dark:bg-amber-950/10' : ''
                       }`}
                     >
@@ -432,7 +441,6 @@ export default function Guesthouses() {
                         )}
                       </td>
 
-                      {/* ── NEW: Status badge cell ──────────────────────────────── */}
                       <td className="py-3 px-4 text-center whitespace-nowrap">
                         {isSuspended ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-lg bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
@@ -446,7 +454,6 @@ export default function Guesthouses() {
                           </span>
                         )}
                       </td>
-                      {/* ──────────────────────────────────────────────────────────── */}
 
                       <td className="py-3 px-4 text-right whitespace-nowrap space-x-1">
                         <button
@@ -463,7 +470,6 @@ export default function Guesthouses() {
                           Edit
                         </Link>
 
-                        {/* ── NEW: Suspend / Activate button in table row ─────── */}
                         {g._id && (
                           <button
                             onClick={() => handleSuspend(g._id!, g.name, g.status ?? 'active')}
@@ -484,7 +490,6 @@ export default function Guesthouses() {
                             )}
                           </button>
                         )}
-                        {/* ────────────────────────────────────────────────────── */}
 
                         <button
                           onClick={() => g._id && handleDelete(g._id, g.name)}
@@ -510,6 +515,25 @@ export default function Guesthouses() {
       <PropertyDetailModal
         property={previewProperty}
         onClose={() => setPreviewProperty(null)}
+      />
+
+      <ConfirmModal
+        open={modal !== null}
+        title={modal?.title ?? ''}
+        message={
+          pending ? (
+            <>
+              <span className="font-semibold">{pending.name}</span>. {modal?.message}
+            </>
+          ) : null
+        }
+        confirmLabel={modal?.confirm ?? ''}
+        loadingLabel={modal?.loading}
+        confirmVariant={modal?.variant}
+        icon={modal?.icon}
+        loading={deletingId !== null || suspendingId !== null}
+        onConfirm={confirmPending}
+        onCancel={() => setPending(null)}
       />
     </div>
   );

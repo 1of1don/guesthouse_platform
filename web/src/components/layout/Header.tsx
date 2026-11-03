@@ -35,9 +35,6 @@ export default function Header({ onOpenMobileMenu, onOpenSearch }: HeaderProps) 
     if (path === '/admins') {
       return { section: 'Governance', current: 'Admin Users' };
     }
-    if (path === '/assistant') {
-      return { section: 'Concierge', current: 'AI Assistant' };
-    }
     if (path === '/settings') {
       return { section: 'Preferences', current: 'Platform Settings' };
     }

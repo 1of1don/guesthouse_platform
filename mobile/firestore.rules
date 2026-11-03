@@ -1,41 +1,74 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    function signedIn() { return request.auth != null; }
-    function isAdmin() {
-      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    function signedIn() {
+      return request.auth != null;
     }
 
-    // Anyone can browse. Only admins edit listings. Customers may only change the
-    // rating totals (done by the app when they rate).
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Suspended customers can still browse, they just can't save, rate or review
+    function notSuspended() {
+      let customer = /databases/$(database)/documents/customers/$(request.auth.uid);
+      return !exists(customer) || get(customer).data.get('isSuspended', false) == false;
+    }
+
+    function changedOnly(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+    }
+
     match /guesthouses/{id} {
       allow read: if true;
       allow create, delete: if isAdmin();
-      allow update: if isAdmin() || (signedIn() &&
-        request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['ratingSum', 'ratingCount', 'averageRating']));
+      allow update: if isAdmin() || (
+        signedIn()
+        && notSuspended()
+        && changedOnly(['ratingSum', 'ratingCount', 'averageRating'])
+      );
     }
 
-    // One review per customer per guesthouse, written only by its owner.
     match /ratings/{ratingId} {
+      function validReview() {
+        return signedIn()
+          && notSuspended()
+          && request.resource.data.customerId == request.auth.uid
+          && ratingId == request.resource.data.guesthouseId + '_' + request.auth.uid
+          && request.resource.data.score is int
+          && request.resource.data.score >= 1
+          && request.resource.data.score <= 5
+          && request.resource.data.get('isHidden', false) == false;
+      }
+
       allow read: if true;
-      allow create, update: if signedIn()
-        && request.resource.data.customerId == request.auth.uid
-        && ratingId == request.resource.data.guesthouseId + '_' + request.auth.uid
-        && request.resource.data.score is int
-        && request.resource.data.score >= 1 && request.resource.data.score <= 5;
+      allow create: if validReview();
+      // Customers can edit their own review unless an admin has hidden it
+      allow update: if (validReview() && resource.data.get('isHidden', false) == false)
+        || (isAdmin() && changedOnly(['isHidden', 'hiddenAt']));
       allow delete: if isAdmin();
     }
 
     match /customers/{uid} {
-      allow read, write: if signedIn() && request.auth.uid == uid;
+      function isOwner() {
+        return signedIn() && request.auth.uid == uid;
+      }
+
+      allow read: if isOwner() || isAdmin();
+      allow create: if isOwner() && !('isSuspended' in request.resource.data);
+      // Only admins can change the suspension fields
+      allow update: if (isOwner() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isSuspended', 'suspendedAt']))
+        || (isAdmin() && changedOnly(['isSuspended', 'suspendedAt']));
+      allow delete: if isOwner() || isAdmin();
+
+      // Suspended customers can still see and remove saves, but can't add new ones
       match /favourites/{guesthouseId} {
-        allow read, write: if signedIn() && request.auth.uid == uid;
+        allow read, delete: if isOwner();
+        allow create, update: if isOwner() && notSuspended();
       }
     }
 
-    // The first admin is added by hand in the Firebase console.
     match /admins/{uid} {
       allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
       allow write: if isAdmin();

@@ -3,7 +3,6 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import CommandMenu from './CommandMenu';
-import FloatingChatWidget from '../chat/FloatingChatWidget';
 import { api } from '../../services/api';
 
 export default function Layout() {
@@ -55,8 +54,6 @@ export default function Layout() {
       {/* Global Quick Search (Command Menu) */}
       <CommandMenu isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
 
-      {/* Floating AI Concierge Chat Widget */}
-      <FloatingChatWidget />
     </div>
   );
 }

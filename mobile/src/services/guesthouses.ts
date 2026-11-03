@@ -75,12 +75,16 @@ const toReview = (id: string, d: DocumentData): Review => ({
   score: num(d.score),
   comment: d.comment ?? '',
   createdAt: millis(d.createdAt),
+  isHidden: d.isHidden === true,
 });
 
 export async function getReviews(guesthouseId: string): Promise<Review[]> {
   const snap = await getDocs(query(collection(db, 'ratings'), where('guesthouseId', '==', guesthouseId)));
   // Sorted here so no Firestore composite index is needed.
-  return snap.docs.map((d) => toReview(d.id, d.data())).sort((a, b) => b.createdAt - a.createdAt);
+  return snap.docs
+    .map((d) => toReview(d.id, d.data()))
+    .filter((r) => !r.isHidden)
+    .sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export async function getMyReview(guesthouseId: string, customerId: string): Promise<Review | null> {
@@ -93,9 +97,17 @@ export async function getMyReview(guesthouseId: string, customerId: string): Pro
 export async function submitReview(guesthouseId: string, customer: Customer, score: number, comment: string) {
   const ghRef = doc(db, 'guesthouses', guesthouseId);
   const rRef = doc(db, 'ratings', `${guesthouseId}_${customer.id}`);
+  const cRef = doc(db, 'customers', customer.id);
   await runTransaction(db, async (tx) => {
-    const [ghSnap, rSnap] = await Promise.all([tx.get(ghRef), tx.get(rRef)]);
+    const [ghSnap, rSnap, cSnap] = await Promise.all([tx.get(ghRef), tx.get(rRef), tx.get(cRef)]);
     if (!ghSnap.exists()) throw new Error('Guesthouse not found.');
+    // Same checks as firestore.rules, done here so the customer gets a clear message
+    if (cSnap.exists() && cSnap.data().isSuspended === true) {
+      throw new Error("Your account is suspended, so you can't post reviews right now.");
+    }
+    if (rSnap.exists() && rSnap.data().isHidden === true) {
+      throw new Error("Your review was hidden by our team and can't be edited.");
+    }
     const d = ghSnap.data();
     let sum = num(d.ratingSum);
     let count = num(d.ratingCount);

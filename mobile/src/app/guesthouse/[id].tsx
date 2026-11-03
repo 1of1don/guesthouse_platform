@@ -32,7 +32,11 @@ export default function GuesthouseDetails() {
       setReviews(rv);
       if (customer) {
         const mine = await getMyReview(id, customer.id);
-        if (mine) { setScore(mine.score); setComment(mine.comment); }
+        if (mine) {
+          setScore(mine.score);
+          setComment(mine.comment);
+          if (mine.isHidden) setFormMsg('Your review was hidden by our team.');
+        }
       }
     } catch {
       setError('Could not load this guesthouse. Check your connection and try again.');
@@ -60,7 +64,11 @@ export default function GuesthouseDetails() {
       await submitReview(g.id, customer, score, comment.trim());
       setFormMsg('Your review is saved.');
       await load();
-    } catch { setFormMsg('Could not save your review. Try again.'); }
+    } catch (e) {
+      // submitReview throws readable messages for suspended accounts and hidden reviews
+      const msg = e instanceof Error && e.message.includes('review') ? e.message : 'Could not save your review. Try again.';
+      setFormMsg(msg);
+    }
     finally { setSaving(false); }
   };
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -15,6 +16,10 @@ import {
 import { api } from '../services/api';
 import type { Guesthouse } from '../types';
 import { useSettings } from '../context/SettingsContext';
+import LoadingButton from '../components/ui/LoadingButton';
+import Spinner from '../components/ui/Spinner';
+import { useToast } from '../components/ui/Toast';
+import { withTimeout } from '../utils/withTimeout';
 
 // City presets for Botswana with accurate GPS coordinates
 const CITY_PRESETS: Record<string, { lat: number; lng: number }> = {
@@ -42,6 +47,7 @@ const POPULAR_AMENITIES = [
 ];
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const SAVE_TIME_LIMIT_MS = 20_000; // 20 seconds
 const ACCEPTED_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 
 const isAcceptedImage = (file: File) =>
@@ -119,6 +125,7 @@ export default function AddEditGuesthouse() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [successToast, setSuccessToast] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (!id) return;
@@ -215,11 +222,11 @@ export default function AddEditGuesthouse() {
 
     try {
       const images = { logo: logoFile, gallery: galleryFiles };
-      if (id) {
-        await api.updateGuesthouse(id, form, images);
-      } else {
-        await api.createGuesthouse(form, images);
-      }
+      const save: Promise<unknown> = id
+        ? api.updateGuesthouse(id, form, images)
+        : api.createGuesthouse(form, images);
+      // Stop waiting after 20 seconds so the page never spins forever.
+      await withTimeout(save, SAVE_TIME_LIMIT_MS, 'Failed to upload guesthouse. Please try again.');
       setSuccessToast(true);
       setTimeout(() => {
         navigate('/guesthouses');
@@ -228,6 +235,7 @@ export default function AddEditGuesthouse() {
       setError(
         cause instanceof Error ? cause.message : 'Unable to save guesthouse property.',
       );
+      showToast({ type: 'error', message: 'Failed to upload guesthouse. Please try again.' });
       setSaving(false);
     }
   };
@@ -295,9 +303,24 @@ export default function AddEditGuesthouse() {
       {successToast && (
         <div className="fixed bottom-6 right-6 z-50 p-4 bg-[#231A14] text-white dark:bg-[#EAE2D8] dark:text-[#181310] rounded-2xl shadow-xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom duration-200 text-xs font-semibold">
           <Check className="w-4 h-4 text-emerald-400 dark:text-emerald-600" />
-          <span>Guesthouse saved successfully! Redirecting...</span>
+          <span>{id ? 'Guesthouse updated successfully' : 'Guesthouse added successfully'}</span>
         </div>
       )}
+
+      {saving && !successToast &&
+        createPortal(
+          <div
+            role="status"
+            aria-live="polite"
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+          >
+            <div className="flex items-center gap-3 rounded-2xl border border-[#E8D8C3] dark:border-[#382B22] bg-white dark:bg-[#1D1714] px-6 py-5 shadow-xl text-sm font-semibold text-[#231A14] dark:text-[#F7F4EF]">
+              <Spinner className="w-5 h-5 text-[#9E7246]" />
+              <span>Updating guesthouse database...</span>
+            </div>
+          </div>,
+          document.body,
+        )}
 
       {/* Form & Live Preview Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -586,7 +609,7 @@ export default function AddEditGuesthouse() {
                 Room & Garden Photos
               </label>
               <p className="text-[11px] text-[#8F7F70] dark:text-[#9E8E80] mb-2">
-                Upload PNG, JPG, or WEBP files up to 5MB each. Photos are sent to Firebase Storage when you save.
+                Upload PNG, JPG, or WEBP files up to 5MB each. Photos are uploaded to Cloudinary when you save.
               </p>
               <input
                 type="file"
@@ -639,20 +662,21 @@ export default function AddEditGuesthouse() {
               >
                 Cancel
               </Link>
-              <button
+              <LoadingButton
                 type="submit"
-                disabled={saving || preparingImages}
-                className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#231A14] hover:bg-[#372A22] dark:bg-[#EAE2D8] dark:text-[#181310] dark:hover:bg-white text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-60"
+                loading={saving}
+                loadingText={
+                  logoFile || galleryFiles.length
+                    ? 'Uploading photos...'
+                    : id
+                      ? 'Saving...'
+                      : 'Adding...'
+                }
+                disabled={preparingImages}
+                icon={<Check className="w-4 h-4 text-[#D6A670] dark:text-[#9E7246]" />}
               >
-                {saving ? (
-                  <span>{logoFile || galleryFiles.length ? 'Uploading photos & saving...' : 'Saving guesthouse...'}</span>
-                ) : (
-                  <>
-                    <Check className="w-4 h-4 text-[#D6A670] dark:text-[#9E7246]" />
-                    <span>{id ? 'Save Changes' : 'Register Guesthouse'}</span>
-                  </>
-                )}
-              </button>
+                {id ? 'Save Changes' : 'Register Guesthouse'}
+              </LoadingButton>
             </div>
           </div>
         </form>
