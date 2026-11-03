@@ -1,13 +1,17 @@
+// GUESTHOUSE CARD: one big card in the Explore and Saved lists (photo, heart, name, price).
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
-import { colors, radius } from '../theme';
+import { Colors, radius } from '../theme';
+import { useColors } from '../context/ThemeContext';
 import { Guesthouse } from '../types';
 
 export function GuesthouseCard({ item }: { item: Guesthouse }) {
+  const colors = useColors();
+  const styles = makeStyles(colors);
   const router = useRouter();
   const { formatPrice } = useSettings();
   const { favouriteIds, toggleFavourite } = useAuth();
@@ -42,7 +46,7 @@ export function GuesthouseCard({ item }: { item: Guesthouse }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Colors) => StyleSheet.create({
   card: { marginHorizontal: 20, marginBottom: 24 },
   image: { width: '100%', height: 220, borderRadius: radius.md, backgroundColor: colors.soft },
   heart: { position: 'absolute', top: 12, right: 12, backgroundColor: colors.paper, borderRadius: 999, padding: 8 },
