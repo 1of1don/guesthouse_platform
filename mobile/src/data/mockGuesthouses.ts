@@ -1,3 +1,5 @@
+// SAMPLE DATA from before Firebase was connected. The app no longer uses it;
+// kept only as an example of the data shape.
 import { Guesthouse, Review } from '../types';
 
 const img = (seed: string) => `https://picsum.photos/seed/${seed}/900/600`;

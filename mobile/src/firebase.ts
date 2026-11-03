@@ -1,3 +1,5 @@
+// FIREBASE CONNECTION: reads the keys from mobile/.env and connects to Firebase
+// Authentication (logins) and Firestore (the database). Every service file imports from here.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getApp, getApps, initializeApp } from 'firebase/app';
 import { Auth, getAuth, initializeAuth } from 'firebase/auth';

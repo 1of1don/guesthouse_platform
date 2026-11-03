@@ -1,0 +1,1032 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mi Casa Es Su Casa - Demo</title>
+
+<!-- The only external files: Leaflet (map library) from cdnjs. If they fail, the Map tab shows a message. -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+
+<style>
+/* ===== Base colours (the theme code below overwrites these on #app) ===== */
+:root {
+  --bg1: #faf6f0; --bg2: #efe3d3; --bg3: #e8d9c5; --acc: #4a3427; --atx: #fff;
+  --tx: #4a3427; --tx2: rgba(74,52,39,.62); --gl: rgba(255,255,255,.62);
+  --gb: rgba(235,221,203,.95); --sh: rgba(74,52,39,.14);
+  --red: #e5484d;
+}
+* { box-sizing: border-box; margin: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body { background: #05080f; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; display: flex; justify-content: center; }
+button, input, select, textarea { font: inherit; }
+
+/* ===== Phone frame ===== */
+#app {
+  position: relative; width: 100%; max-width: 430px; height: 100%; overflow: hidden;
+  color: var(--tx); background: linear-gradient(170deg, var(--bg1), var(--bg2));
+  transition: background .6s, color .6s;
+}
+.blob { position: absolute; border-radius: 50%; filter: blur(55px); pointer-events: none; }
+.b1 { width: 240px; height: 240px; background: var(--bg3); top: -50px; right: -70px; opacity: .8; }
+.b2 { width: 200px; height: 200px; background: var(--acc); bottom: 90px; left: -80px; opacity: .25; }
+
+/* ===== Small building blocks ===== */
+svg.i { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.glass { background: var(--gl); border: 1px solid var(--gb); backdrop-filter: blur(18px) saturate(160%); -webkit-backdrop-filter: blur(18px) saturate(160%); box-shadow: 0 8px 28px var(--sh); }
+.row { display: flex; align-items: center; gap: 10px; }
+.sp { justify-content: space-between; }
+h1 { font-size: 26px; letter-spacing: -.5px; }
+h3 { font-size: 17px; }
+.m { color: var(--tx2); font-size: 12px; }
+.btn { border: 0; border-radius: 16px; padding: 14px; font-weight: 700; font-size: 15px; background: var(--acc); color: var(--atx); cursor: pointer; width: 100%; }
+.btn.ghost { background: var(--gl); color: var(--tx); border: 1px solid var(--gb); }
+.btn:active, .chip:active, .li:active, .ib:active, .tc:active { transform: scale(.96); }
+.ib { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--gb); background: var(--gl); color: var(--tx); cursor: pointer; }
+.av { width: 42px; height: 42px; border-radius: 50%; background: var(--acc); color: var(--atx); display: grid; place-items: center; font-weight: 700; cursor: pointer; overflow: hidden; flex: none; }
+.av img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ===== Pages (one per tab) ===== */
+.page { position: absolute; inset: 0; overflow-y: auto; padding: 16px 16px 120px; opacity: 0; pointer-events: none; transition: opacity .35s; }
+.page.on { opacity: 1; pointer-events: auto; }
+
+/* ===== Explore: search, chips, sort, cards ===== */
+.search { border-radius: 16px; padding: 12px 14px; margin: 14px 0; }
+.search input { flex: 1; border: 0; background: none; color: var(--tx); font-size: 14px; outline: 0; min-width: 0; }
+.chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 12px; }
+.chip { padding: 8px 16px; border-radius: 12px; font-size: 13px; white-space: nowrap; cursor: pointer; }
+.chip.on { background: var(--acc); color: var(--atx); border-color: transparent; font-weight: 600; }
+.sort { border-radius: 12px; padding: 7px 10px; color: var(--tx); font-size: 13px; }
+.li { padding: 10px; border-radius: 20px; margin-bottom: 10px; cursor: pointer; }
+.th { width: 62px; height: 62px; border-radius: 16px; overflow: hidden; flex: none; }
+.th svg { width: 100%; height: 100%; display: block; }
+.str { display: flex; align-items: center; gap: 3px; font-size: 12px; }
+.str .i { width: 14px; height: 14px; fill: #f5a623; stroke: #f5a623; }
+.pr { font-weight: 700; font-size: 14px; }
+
+/* ===== Skeleton (grey pulsing boxes while "loading") ===== */
+.sk { background: color-mix(in srgb, var(--tx) 12%, transparent); border-radius: 12px; animation: pulse 1s ease-in-out infinite alternate; }
+@keyframes pulse { from { opacity: .45; } to { opacity: 1; } }
+
+/* ===== Bottom tab bar ===== */
+nav { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 4px; padding: 8px; border-radius: 28px; z-index: 20; }
+nav button { position: relative; z-index: 1; width: 70px; height: 52px; border: 0; border-radius: 18px; background: none; color: var(--tx); cursor: pointer; display: grid; place-items: center; font-size: 10px; padding: 4px 0; }
+nav button.on { color: var(--atx); font-weight: 700; }
+nav .ind { position: absolute; left: 8px; top: 8px; width: 70px; height: 52px; border-radius: 18px; background: var(--acc); transition: transform .4s; }
+
+/* ===== Map page ===== */
+#page-map { padding: 0; overflow: hidden; }
+.mh { position: absolute; top: 14px; left: 16px; right: 16px; z-index: 2; }
+#map { position: absolute; left: 0; top: 74px; width: 100%; height: calc(100% - 74px); isolation: isolate; background: var(--bg2); }
+#map-fallback { padding: 20px 16px 120px; overflow-y: auto; height: 100%; }
+.pin { transform: translate(-50%, -100%); display: inline-block; background: var(--bg1); color: var(--tx); padding: 5px 10px; border-radius: 99px; font: 700 11px/1 system-ui; white-space: nowrap; box-shadow: 0 4px 12px var(--sh); border: 2px solid var(--acc); cursor: pointer; }
+.pin.on { background: var(--acc); color: var(--atx); }
+.mc { position: absolute; left: 14px; right: 14px; bottom: 96px; z-index: 3; margin: 0; }
+.dk .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.8) contrast(.9); }
+
+/* ===== Stay detail (slides in from the right) ===== */
+#det { position: absolute; inset: 0; z-index: 25; overflow-y: auto; background: var(--bg1); transform: translateX(100%); transition: transform .4s; }
+#det.on { transform: none; }
+.hero { height: 280px; position: relative; }
+.hero > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hero .row { position: absolute; top: 14px; left: 14px; right: 14px; }
+.sheet { margin-top: -28px; position: relative; border-radius: 28px 28px 0 0; padding: 20px 18px 40px; background: var(--bg1); }
+.am { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 10px 0 16px; }
+.am div { text-align: center; font-size: 11px; padding: 10px 4px; border-radius: 16px; display: grid; justify-items: center; gap: 5px; }
+.rv { padding: 12px; border-radius: 16px; margin-top: 8px; font-size: 13px; }
+.rate { display: flex; gap: 6px; margin: 8px 0; }
+.rs { font-size: 32px; line-height: 1; cursor: pointer; color: color-mix(in srgb, var(--tx) 22%, transparent); user-select: none; }
+.rs.on { color: #f5a623; }
+.inp { width: 100%; padding: 14px; margin-top: 12px; border-radius: 14px; border: 1px solid var(--gb); background: var(--gl); color: var(--tx); font-size: 15px; outline: 0; }
+textarea.inp { resize: vertical; min-height: 70px; }
+
+/* Suspended notice (red card) */
+.notice { padding: 14px; border-radius: 16px; margin-top: 10px; font-size: 13px; line-height: 1.5; border: 1px solid var(--red); background: color-mix(in srgb, var(--red) 12%, transparent); }
+.badge-red { display: inline-block; margin-top: 6px; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 700; background: var(--red); color: #fff; }
+
+/* ===== Profile ===== */
+.pf { text-align: center; padding: 20px 14px; border-radius: 24px; margin-bottom: 18px; }
+.big-av { position: relative; width: 96px; height: 96px; margin: 0 auto 10px; }
+.big-av .av { width: 96px; height: 96px; font-size: 38px; cursor: default; }
+.cam { position: absolute; right: -2px; bottom: -2px; width: 34px; height: 34px; border-radius: 50%; background: var(--acc); color: var(--atx); display: grid; place-items: center; cursor: pointer; border: 3px solid var(--bg1); }
+.cam .i { width: 16px; height: 16px; }
+.grp { border-radius: 18px; overflow: hidden; margin-bottom: 18px; }
+.st { display: flex; align-items: center; gap: 12px; padding: 13px 14px; cursor: pointer; border-bottom: 1px solid var(--gb); font-size: 15px; }
+.grp .st:last-child { border-bottom: 0; }
+.st .v { margin-left: auto; color: var(--tx2); font-size: 14px; display: flex; align-items: center; gap: 4px; }
+.si { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; background: var(--acc); color: var(--atx); flex: none; font-weight: 700; }
+.si .i { width: 18px; height: 18px; }
+.sh { font-size: 12px; color: var(--tx2); text-transform: uppercase; margin: 0 14px 6px; letter-spacing: .5px; }
+.tg { width: 46px; height: 28px; border-radius: 99px; background: var(--gb); position: relative; transition: .3s; flex: none; }
+.tg.on { background: var(--red); }
+.tg::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: .3s; box-shadow: 0 1px 3px #0004; }
+.tg.on::after { transform: translateX(18px); }
+
+/* Theme cards with the concentric-circle preview */
+.themes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+.tc { border-radius: 20px; padding: 10px; cursor: pointer; position: relative; text-align: center; }
+.tc.on { box-shadow: 0 0 0 2.5px var(--acc), 0 8px 28px var(--sh); }
+.tc svg.cc { width: 80px; height: 80px; display: block; margin: 2px auto 8px; }
+.lk { position: absolute; top: 10px; right: 10px; color: var(--tx2); }
+.lk .i { width: 16px; height: 16px; }
+
+/* ===== Bottom sheet (theme / currency pickers) ===== */
+#ov { position: absolute; inset: 0; background: rgba(0,0,0,.4); z-index: 50; display: flex; align-items: flex-end; opacity: 0; pointer-events: none; transition: .3s; }
+#ov.on { opacity: 1; pointer-events: auto; }
+#bs { width: 100%; max-height: 84%; overflow: auto; padding: 22px 18px 24px; border-radius: 28px 28px 0 0; background: var(--bg1); transform: translateY(100%); transition: transform .35s; }
+#ov.on #bs { transform: none; }
+
+/* ===== Login screen ===== */
+.scr { position: absolute; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 22px; overflow-y: auto; background: linear-gradient(160deg, var(--bg3), var(--bg2)); transition: opacity .4s, visibility .4s; }
+.scr.off { opacity: 0; visibility: hidden; }
+.card { width: 100%; border-radius: 28px; padding: 26px 22px; margin: auto; }
+.er { color: var(--red); font-size: 12px; min-height: 16px; margin-top: 6px; }
+.ok { color: #2f9e5b; font-size: 12px; margin-top: 6px; }
+.link { text-align: center; margin-top: 14px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.demo-acc { margin-top: 16px; padding: 12px; border-radius: 14px; font-size: 12px; line-height: 1.6; }
+.demo-acc div { cursor: pointer; }
+
+/* ===== Toast message ===== */
+#toast { position: absolute; top: 14px; left: 50%; transform: translate(-50%, -90px); z-index: 60; padding: 11px 18px; border-radius: 18px; font-size: 13px; transition: transform .4s; width: max-content; max-width: 90%; text-align: center; }
+#toast.on { transform: translate(-50%, 0); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Icon sprite: each <symbol> is drawn later with <use href="#name"> -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16 16l5 5"/></symbol>
+    <symbol id="star" viewBox="0 0 24 24"><path d="M12 3l2.8 6 6.2.7-4.7 4.3 1.5 6.5L12 17l-5.8 3.5 1.5-6.5L3 9.7 9.2 9z"/></symbol>
+    <symbol id="home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+    <symbol id="bm" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></symbol>
+    <symbol id="user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-5 15-5 16 0"/></symbol>
+    <symbol id="pin" viewBox="0 0 24 24"><path d="M12 21s7-6 7-12a7 7 0 0 0-14 0c0 6 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></symbol>
+    <symbol id="back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+    <symbol id="wifi" viewBox="0 0 24 24"><path d="M2 9a15 15 0 0 1 20 0M5.5 12.5a10 10 0 0 1 13 0M9 16a5 5 0 0 1 6 0"/><circle cx="12" cy="19.5" r=".8"/></symbol>
+    <symbol id="tv" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/></symbol>
+    <symbol id="paw" viewBox="0 0 24 24"><circle cx="6" cy="10" r="2"/><circle cx="10" cy="6" r="2"/><circle cx="14" cy="6" r="2"/><circle cx="18" cy="10" r="2"/><path d="M12 12c-4 0-6 4-5 6s3 1 5 1 4 1 5-1-1-6-5-6z"/></symbol>
+    <symbol id="pool" viewBox="0 0 24 24"><path d="M2 17c2 0 2-1.5 5-1.5s3 1.5 5 1.5 3-1.5 5-1.5 3 1.5 5 1.5M2 21c2 0 2-1.5 5-1.5s3 1.5 5 1.5 3-1.5 5-1.5 3 1.5 5 1.5M8 13V5a2 2 0 0 1 4 0M14 13V5a2 2 0 0 1 4 0M8 9h6"/></symbol>
+    <symbol id="cup" viewBox="0 0 24 24"><path d="M4 8h13v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM17 10h2a2 2 0 0 1 0 5h-2M8 3v2M12 3v2"/></symbol>
+    <symbol id="tag" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/></symbol>
+    <symbol id="cam" viewBox="0 0 24 24"><path d="M3 8h4l2-3h6l2 3h4v12H3z"/><circle cx="12" cy="13" r="4"/></symbol>
+    <symbol id="lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="card" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M6 15h3"/></symbol>
+    <symbol id="out" viewBox="0 0 24 24"><path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"/></symbol>
+    <symbol id="map" viewBox="0 0 24 24"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14"/></symbol>
+    <symbol id="chk" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
+    <symbol id="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+    <symbol id="pal" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.5 0 2-1 1.5-2s0-2 1.5-2h2a3 3 0 0 0 3-3 9 9 0 0 0-8-11z"/><path d="M8 11h.01M12 8h.01M16 11h.01"/></symbol>
+    <symbol id="coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c0-1 1-1.5 2.5-1.5s2.5.5 2.5 1.5-1 1.5-2.5 1.5-2.5.5-2.5 1.5 1 1.5 2.5 1.5 2.5-.5 2.5-1.5"/></symbol>
+    <symbol id="fit" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+  </defs></svg>
+
+  <div class="blob b1"></div><div class="blob b2"></div>
+
+  <!-- Tab pages. Their content is filled in by the render... functions in the script. -->
+  <section class="page on" id="page-explore"></section>
+  <section class="page" id="page-map">
+    <div class="mh row sp">
+      <h1>Map</h1>
+      <button class="ib" onclick="fitAllPins()" title="Fit all stays"><svg class="i"><use href="#fit"></use></svg></button>
+    </div>
+    <div id="map"></div>
+    <div id="map-card"></div>
+  </section>
+  <section class="page" id="page-saved"></section>
+  <section class="page" id="page-profile"></section>
+
+  <!-- Bottom tab bar -->
+  <nav class="glass" id="nav"></nav>
+
+  <!-- Stay detail -->
+  <div id="det"></div>
+
+  <!-- Bottom sheet for pickers -->
+  <div id="ov" onclick="closeSheet()"><div id="bs" onclick="event.stopPropagation()"></div></div>
+
+  <!-- Login / sign up screen -->
+  <div class="scr" id="login"></div>
+
+  <!-- Toast -->
+  <div id="toast" class="glass"></div>
+
+  <!-- Hidden file picker for the profile picture -->
+  <input type="file" id="avatar-input" accept="image/*" style="display:none" onchange="onAvatarChosen(this)">
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+<script>
+/* =====================================================================
+   FAKE DATA (no backend: everything lives in memory)
+   ===================================================================== */
+
+const STAYS = [
+  { id: 1, name: "Riverside Guesthouse", city: "Gaborone", country: "Botswana", cat: "City", price: 650, rating: 4.9, lat: -24.6282, lng: 25.9231, amenities: ["wifi", "pool", "cup", "tv"], desc: "A cozy riverside stay with garden views, walking distance to the CBD.", sky: ["#6c7bd9", "#f0c8e8", "#3a6a5a", "#2a2f4a"] },
+  { id: 2, name: "Savanna Sunset Lodge", city: "Kasane", country: "Botswana", cat: "Safari", price: 890, rating: 4.8, lat: -17.8101, lng: 25.1514, amenities: ["wifi", "pool", "cup", "paw"], desc: "Thatched chalets on the Chobe River. Elephants stroll past the deck most evenings.", sky: ["#ff9a5a", "#ffd9a0", "#5b7a3a", "#8a3b12"] },
+  { id: 3, name: "Victoria Falls Rest", city: "Victoria Falls", country: "Zimbabwe", cat: "Safari", price: 1100, rating: 4.7, lat: -17.9243, lng: 25.8572, amenities: ["wifi", "pool", "cup", "tv"], desc: "Mist-cooled verandas a short walk from the falls.", sky: ["#4aa3df", "#bfe6f5", "#2f8a5a", "#7a4a2a"] },
+  { id: 4, name: "Acacia Lodge", city: "Francistown", country: "Botswana", cat: "Lodge", price: 480, rating: 4.6, lat: -21.1699, lng: 27.5084, amenities: ["wifi", "cup", "tv"], desc: "Quiet lodge under old acacia trees, close to the airport and city centre.", sky: ["#f2b36b", "#fde7c4", "#6e8b4a", "#9a4a2a"] },
+  { id: 5, name: "Kalahari Rest Stop", city: "Maun", country: "Botswana", cat: "Safari", price: 720, rating: 4.5, lat: -19.9833, lng: 23.4167, amenities: ["wifi", "pool", "paw", "cup"], desc: "Base for Okavango Delta trips, with a shaded courtyard and campfire.", sky: ["#7fb7e6", "#e6f3fb", "#8a9a6a", "#4a5a6a"] },
+  { id: 6, name: "Serowe Heritage House", city: "Serowe", country: "Botswana", cat: "Lodge", price: 420, rating: 4.5, lat: -22.3876, lng: 26.7108, amenities: ["wifi", "cup", "paw", "tv"], desc: "A restored family home with a shaded garden near the rhino sanctuary.", sky: ["#e9a36b", "#fbe3c4", "#7a8b4a", "#8a3a2a"] },
+  { id: 7, name: "Desert Rose Inn", city: "Ghanzi", country: "Botswana", cat: "Budget", price: 390, rating: 4.2, lat: -21.7, lng: 21.65, amenities: ["wifi", "tv", "tag"], desc: "Simple, clean rooms on the Trans-Kalahari route.", sky: ["#b58fd6", "#f3e1f7", "#6a7a5a", "#5a3a6a"] },
+  { id: 8, name: "Joburg Garden Suites", city: "Johannesburg", country: "South Africa", cat: "City", price: 980, rating: 4.4, lat: -26.2041, lng: 28.0473, amenities: ["wifi", "pool", "tv", "card"], desc: "Leafy suburban suites with secure parking and fast fibre.", sky: ["#5a8fd6", "#d9e8f7", "#4a7a4a", "#2a3a5a"] }
+];
+
+const AMENITY_LABEL = { wifi: "Wifi", pool: "Pool", cup: "Breakfast", paw: "Pets", tv: "TV", tag: "Deals", card: "Card pay" };
+const CATEGORIES = ["All", "Safari", "City", "Lodge", "Budget"];
+
+// Prices are stored in Pula (BWP). r = how many of this currency one Pula buys.
+const CURRENCIES = {
+  BWP: { symbol: "P", rate: 1, name: "Botswana Pula" },
+  USD: { symbol: "$", rate: 0.073, name: "US Dollar" },
+  ZAR: { symbol: "R", rate: 1.33, name: "South African Rand" },
+  EUR: { symbol: "€", rate: 0.067, name: "Euro" },
+  GBP: { symbol: "£", rate: 0.057, name: "British Pound" }
+};
+
+// Theme colours. c = [background 1, background 2, background 3, accent].
+const LIGHT = { tx: "#1d1a16", tx2: "rgba(29,26,22,.58)", gl: "rgba(255,255,255,.62)", gb: "rgba(255,255,255,.92)", sh: "rgba(60,50,40,.16)" };
+const DARK = { tx: "#f4f6f8", tx2: "rgba(244,246,248,.6)", gl: "rgba(255,255,255,.10)", gb: "rgba(255,255,255,.22)", sh: "rgba(0,0,0,.45)" };
+
+function makeTheme(name, c, isDark, atx, free) {
+  return Object.assign({ name: name, c: c, atx: atx, free: free }, isDark ? DARK : LIGHT);
+}
+
+const THEMES = {
+  cream: Object.assign(makeTheme("Warm Cream", ["#faf6f0", "#efe3d3", "#e8d9c5", "#4a3427"], false, "#fff", true),
+    { tx: "#4a3427", tx2: "rgba(74,52,39,.62)", gb: "rgba(235,221,203,.95)", sh: "rgba(74,52,39,.14)" }),
+  sky: makeTheme("Sky Blue", ["#f4f8fd", "#e1edfa", "#b9d6f2", "#2f7fd1"], false, "#fff", true),
+  rose: makeTheme("Rose Quartz", ["#fbf1f3", "#f0d6da", "#d9a6ae", "#a23d5f"], false, "#fff", true),
+  mviolet: makeTheme("Midnight Violet", ["#140f1d", "#261a3c", "#6b3a9e", "#c9a2f5"], true, "#1a0a2e", false),
+  midnight: makeTheme("Coastal Midnight", ["#061222", "#123249", "#447794", "#7fc4e8"], true, "#041018", false),
+  amber: makeTheme("Amber Navy", ["#1b2430", "#28333F", "#2F6895", "#EE9014"], true, "#1a1000", false),
+  rosetl: makeTheme("Rose Teal", ["#00050D", "#18203C", "#22587F", "#C46EA1"], true, "#1a0612", false),
+  rouge: makeTheme("Deep Rouge", ["#10060a", "#420001", "#640000", "#e0a3a0"], true, "#1a0505", false),
+  lav: makeTheme("Lavender Mist", ["#f6f3fb", "#e4dcf3", "#c3b2e6", "#6b4bb5"], false, "#fff", false),
+  violet: makeTheme("Violet Night", ["#120d1a", "#2a1a45", "#6b3fa0", "#b88af0"], true, "#1a0a2e", false),
+  mint: makeTheme("Fresh Mint", ["#f3faf4", "#dff1e3", "#b7e3c1", "#7ed957"], false, "#10240a", false),
+  emerald: makeTheme("Cafe Emerald", ["#052626", "#0e4a3a", "#1A734A", "#BF7C2A"], true, "#fff", false),
+  tang: makeTheme("Tangerine", ["#fff4ec", "#fde0cc", "#f9b48a", "#e5501b"], false, "#fff", false),
+  cocoa: makeTheme("Velvet Cocoa", ["#FFF6ED", "#f0dcc3", "#D2A679", "#8B5E3C"], false, "#fff", false),
+  ember: makeTheme("Forest Ember", ["#0B0F19", "#213747", "#214B62", "#EB6953"], true, "#1a0802", false),
+  stone: makeTheme("Soft Stone", ["#f5f3f0", "#e5e0d9", "#c9c1b6", "#4a4540"], false, "#fff", false),
+  noir: makeTheme("Street Noir", ["#0D0D0D", "#262626", "#8C3232", "#d94c4c"], true, "#fff", false)
+};
+
+// Fake accounts. Sign-ups are added here (in memory only).
+const ACCOUNTS = [
+  { email: "demo@micasa.app", password: "password123", name: "Demo Guest", username: "demo_guest", suspended: false, avatar: null },
+  { email: "suspended@micasa.app", password: "password123", name: "Sam Suspended", username: "sam_s", suspended: true, avatar: null }
+];
+
+// A few fake reviews for every stay.
+const REVIEWS = {};
+const SAMPLE_REVIEWS = [
+  { name: "Neo", stars: 5, text: "Lovely hosts and a spotless room." },
+  { name: "Lerato", stars: 4, text: "Great breakfast, a little noisy at night." },
+  { name: "Tom", stars: 5, text: "Would stay again. Easy check-in." }
+];
+STAYS.forEach(function (stay, i) {
+  REVIEWS[stay.id] = [SAMPLE_REVIEWS[i % 3], SAMPLE_REVIEWS[(i + 1) % 3]];
+});
+
+/* =====================================================================
+   APP STATE (one object holds everything that can change)
+   ===================================================================== */
+
+const state = {
+  tab: "explore",
+  theme: "cream",
+  currency: "BWP",
+  user: null,              // the logged-in account, or null for a guest
+  saved: [],               // ids of saved stays
+  query: "",
+  category: "All",
+  sort: "rating",
+  exploreLoading: true,
+  openStayId: null,
+  newStars: 0,             // stars picked in the review form
+  loginMode: "signin",     // "signin" or "signup"
+  selectedPinId: null
+};
+
+const TABS = [
+  { key: "explore", icon: "home", label: "Explore" },
+  { key: "map", icon: "map", label: "Map" },
+  { key: "saved", icon: "bm", label: "Saved" },
+  { key: "profile", icon: "user", label: "Profile" }
+];
+
+/* =====================================================================
+   SMALL HELPERS
+   ===================================================================== */
+
+// Draws one icon from the sprite.
+function icon(name, style) {
+  return '<svg class="i" style="' + (style || "") + '"><use href="#' + name + '"></use></svg>';
+}
+
+// Makes user text safe to put inside HTML (stops <script> in a review, etc.).
+function escapeHtml(text) {
+  return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+// Shows a price in the chosen currency, e.g. "$47".
+function formatPrice(pula) {
+  const cur = CURRENCIES[state.currency];
+  return cur.symbol + Math.round(pula * cur.rate).toLocaleString();
+}
+
+function findStay(id) {
+  return STAYS.find(function (s) { return s.id === id; });
+}
+
+function isSuspended() {
+  return state.user !== null && state.user.suspended;
+}
+
+function starsText(count) {
+  return "★★★★★".slice(0, count) + "☆☆☆☆☆".slice(0, 5 - count);
+}
+
+// Scenic placeholder picture (sky, hill, little house) drawn with SVG.
+let artCounter = 0;
+function art(stay) {
+  artCounter++;
+  const id = "sky" + artCounter;
+  const sunX = 60 + ((stay.id * 53) % 190);
+  const c = stay.sky;
+  return '<svg viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice">' +
+    '<defs><linearGradient id="' + id + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + c[0] + '"/><stop offset="1" stop-color="' + c[1] + '"/></linearGradient></defs>' +
+    '<rect width="300" height="200" fill="url(#' + id + ')"/>' +
+    '<circle cx="' + sunX + '" cy="50" r="22" fill="#fff" opacity=".75"/>' +
+    '<path d="M0 150Q80 112 150 140T300 125V200H0z" fill="' + c[2] + '"/>' +
+    '<path d="M110 152v-30l40-26 40 26v30z" fill="#fff" opacity=".93"/>' +
+    '<path d="M103 123l47-31 47 31" stroke="' + c[3] + '" stroke-width="9" fill="none" stroke-linejoin="round"/>' +
+    '<rect x="143" y="134" width="15" height="18" fill="' + c[3] + '"/>' +
+    '<rect x="118" y="128" width="12" height="10" fill="' + c[1] + '"/></svg>';
+}
+
+// Round avatar: the photo if there is one, otherwise the first letter of the name.
+function avatarHtml() {
+  if (!state.user) return "?";
+  if (state.user.avatar) return '<img src="' + state.user.avatar + '" alt="">';
+  return escapeHtml(state.user.name.charAt(0).toUpperCase());
+}
+
+/* =====================================================================
+   TOAST (short message at the top)
+   ===================================================================== */
+
+let toastTimer = null;
+function showToast(message) {
+  const el = document.getElementById("toast");
+  el.textContent = message;
+  el.classList.add("on");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { el.classList.remove("on"); }, 2500);
+}
+
+/* =====================================================================
+   THEME + CURRENCY (theme = CSS variables on #app)
+   ===================================================================== */
+
+function applyTheme() {
+  const t = THEMES[state.theme];
+  const app = document.getElementById("app");
+  app.style.setProperty("--bg1", t.c[0]);
+  app.style.setProperty("--bg2", t.c[1]);
+  app.style.setProperty("--bg3", t.c[2]);
+  app.style.setProperty("--acc", t.c[3]);
+  ["atx", "tx", "tx2", "gl", "gb", "sh"].forEach(function (name) {
+    app.style.setProperty("--" + name, t[name]);
+  });
+  app.classList.toggle("dk", t.tx === DARK.tx);
+}
+
+function pickTheme(key) {
+  if (!THEMES[key].free && !state.user) {
+    showToast("Log in to unlock this theme");
+    return;
+  }
+  state.theme = key;
+  saveSettings();
+  applyTheme();
+  openThemePicker();   // redraw the sheet so the tick moves
+  renderProfile();
+}
+
+function pickCurrency(code) {
+  state.currency = code;
+  saveSettings();
+  closeSheet();
+  renderAll();
+  showToast("Prices now in " + code);
+}
+
+// Theme and currency are the only things remembered after a refresh.
+function saveSettings() {
+  try {
+    localStorage.setItem("micasa-demo-theme", state.theme);
+    localStorage.setItem("micasa-demo-currency", state.currency);
+  } catch (e) { /* storage blocked: that's fine */ }
+}
+
+function loadSettings() {
+  try {
+    const theme = localStorage.getItem("micasa-demo-theme");
+    const currency = localStorage.getItem("micasa-demo-currency");
+    // Nobody is logged in at start, so only free themes are allowed here.
+    if (theme && THEMES[theme] && THEMES[theme].free) state.theme = theme;
+    if (currency && CURRENCIES[currency]) state.currency = currency;
+  } catch (e) { /* storage blocked: keep defaults */ }
+}
+
+/* =====================================================================
+   TABS + BOTTOM BAR
+   ===================================================================== */
+
+function renderNav() {
+  const index = TABS.findIndex(function (t) { return t.key === state.tab; });
+  let html = '<div class="ind" style="transform:translateX(' + (index * 74) + 'px)"></div>';
+  TABS.forEach(function (t) {
+    html += '<button class="' + (t.key === state.tab ? "on" : "") + '" onclick="goToTab(\'' + t.key + '\')">' +
+      icon(t.icon) + '<span>' + t.label + '</span></button>';
+  });
+  document.getElementById("nav").innerHTML = html;
+}
+
+function goToTab(key) {
+  closeStay();
+  state.tab = key;
+  TABS.forEach(function (t) {
+    document.getElementById("page-" + t.key).classList.toggle("on", t.key === key);
+  });
+  renderNav();
+  if (key === "map") showMap();
+  if (key === "profile") showProfileWithSkeleton();
+  if (key === "saved") renderSaved();
+}
+
+function renderAll() {
+  renderNav();
+  renderExplore();
+  renderSaved();
+  renderProfile();
+  drawMapPins();
+  renderMapCard();
+  if (state.openStayId !== null) renderStay();
+}
+
+/* =====================================================================
+   EXPLORE PAGE
+   ===================================================================== */
+
+// Filters by search + category, then sorts.
+function getVisibleStays() {
+  const q = state.query.toLowerCase();
+  const list = STAYS.filter(function (s) {
+    const matchesCategory = state.category === "All" || s.cat === state.category;
+    const matchesSearch = (s.name + " " + s.city).toLowerCase().includes(q);
+    return matchesCategory && matchesSearch;
+  });
+  if (state.sort === "low") list.sort(function (a, b) { return a.price - b.price; });
+  if (state.sort === "high") list.sort(function (a, b) { return b.price - a.price; });
+  if (state.sort === "rating") list.sort(function (a, b) { return b.rating - a.rating; });
+  return list;
+}
+
+// One stay card (used in Explore, Saved and the Map card).
+function stayRow(stay) {
+  return '<div class="li glass row" onclick="openStay(' + stay.id + ')">' +
+    '<div class="th">' + art(stay) + '</div>' +
+    '<div style="flex:1;min-width:0"><b style="font-size:14px">' + stay.name + '</b>' +
+    '<div class="m row" style="gap:3px;margin:3px 0">' + icon("pin", "width:13px;height:13px") + stay.city + '</div>' +
+    '<span class="str">' + icon("star") + '<b>' + stay.rating + '</b></span></div>' +
+    '<div class="pr">' + formatPrice(stay.price) + '<div class="m" style="font-weight:400">/night</div></div></div>';
+}
+
+function skeletonRow() {
+  return '<div class="li glass row"><div class="th sk"></div><div style="flex:1">' +
+    '<div class="sk" style="height:14px;width:70%"></div>' +
+    '<div class="sk" style="height:10px;width:40%;margin-top:8px"></div>' +
+    '<div class="sk" style="height:10px;width:25%;margin-top:8px"></div></div></div>';
+}
+
+// The header, search box and chips are drawn once; only the list is redrawn while typing.
+function renderExplore() {
+  let chips = "";
+  CATEGORIES.forEach(function (c) {
+    chips += '<div class="chip glass ' + (c === state.category ? "on" : "") + '" onclick="setCategory(\'' + c + '\')">' + c + '</div>';
+  });
+  document.getElementById("page-explore").innerHTML =
+    '<div class="row sp"><div><div class="m">Explore</div><b>Mi Casa Es Su Casa</b></div>' +
+    '<div class="row"><div class="chip glass on" onclick="openCurrencyPicker()">' + state.currency + '</div>' +
+    '<div class="av" onclick="goToTab(\'profile\')">' + avatarHtml() + '</div></div></div>' +
+    '<div class="search glass row">' + icon("search") +
+    '<input id="search-box" placeholder="Find a stay or city" value="' + escapeHtml(state.query) + '" oninput="setQuery(this.value)"></div>' +
+    '<div class="chips">' + chips + '</div>' +
+    '<div class="row sp" style="margin-bottom:10px"><h3 id="stay-count"></h3>' +
+    '<select class="sort glass" onchange="setSort(this.value)">' +
+    '<option value="rating"' + (state.sort === "rating" ? " selected" : "") + '>Top rated</option>' +
+    '<option value="low"' + (state.sort === "low" ? " selected" : "") + '>Price: low to high</option>' +
+    '<option value="high"' + (state.sort === "high" ? " selected" : "") + '>Price: high to low</option>' +
+    '</select></div><div id="stay-list"></div>';
+  renderExploreList();
+}
+
+function renderExploreList() {
+  const listEl = document.getElementById("stay-list");
+  const countEl = document.getElementById("stay-count");
+  if (state.exploreLoading) {
+    countEl.textContent = "Loading...";
+    listEl.innerHTML = skeletonRow() + skeletonRow() + skeletonRow() + skeletonRow();
+    return;
+  }
+  const list = getVisibleStays();
+  countEl.textContent = list.length + " stays";
+  listEl.innerHTML = list.length
+    ? list.map(stayRow).join("")
+    : '<div class="glass li m" style="text-align:center">No stays match your search.</div>';
+}
+
+function setQuery(value) { state.query = value; renderExploreList(); }
+function setCategory(c) { state.category = c; renderExplore(); }
+function setSort(value) { state.sort = value; renderExploreList(); }
+
+/* =====================================================================
+   MAP PAGE (Leaflet + OpenStreetMap, with an offline fallback)
+   ===================================================================== */
+
+let leafletMap = null;
+let markers = [];
+
+function leafletLoaded() {
+  return typeof window.L !== "undefined";
+}
+
+// Builds the map the first time the Map tab opens.
+function showMap() {
+  if (!leafletLoaded()) {
+    showMapFallback();
+    return;
+  }
+  if (leafletMap === null) {
+    leafletMap = L.map("map", { zoomControl: false }).setView([-22, 25.5], 5);
+    const tiles = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18, attribution: "&copy; OpenStreetMap"
+    }).addTo(leafletMap);
+    tiles.once("tileerror", function () { showToast("Map tiles could not load. Are you offline?"); });
+    leafletMap.on("click", function () { selectPin(null); });
+    drawMapPins();
+    fitAllPins();
+  }
+  // The map was hidden, so tell Leaflet to measure its box again.
+  setTimeout(function () { leafletMap.invalidateSize(); }, 50);
+}
+
+function showMapFallback() {
+  document.getElementById("map").innerHTML =
+    '<div id="map-fallback"><div class="notice">The map could not load (no internet?). The rest of the demo still works. Here are the stays instead:</div><br>' +
+    STAYS.map(stayRow).join("") + '</div>';
+}
+
+// One price pin per stay. Called again when the currency or selection changes.
+function drawMapPins() {
+  if (leafletMap === null) return;
+  markers.forEach(function (m) { m.remove(); });
+  markers = STAYS.map(function (stay) {
+    const cls = stay.id === state.selectedPinId ? "pin on" : "pin";
+    const pinIcon = L.divIcon({ className: "", html: '<div class="' + cls + '">' + formatPrice(stay.price) + '</div>', iconSize: [0, 0] });
+    return L.marker([stay.lat, stay.lng], { icon: pinIcon })
+      .on("click", function () { selectPin(stay.id); })
+      .addTo(leafletMap);
+  });
+}
+
+function selectPin(id) {
+  state.selectedPinId = id;
+  drawMapPins();
+  renderMapCard();
+}
+
+// The small card at the bottom of the map.
+function renderMapCard() {
+  const box = document.getElementById("map-card");
+  const stay = findStay(state.selectedPinId);
+  box.innerHTML = stay ? '<div class="mc">' + stayRow(stay) + '</div>' : "";
+}
+
+function fitAllPins() {
+  if (leafletMap === null) return;
+  const points = STAYS.map(function (s) { return [s.lat, s.lng]; });
+  leafletMap.fitBounds(points, { padding: [40, 40] });
+}
+
+// Used by the "Open on map" button in the stay detail.
+function openOnMap(id) {
+  const stay = findStay(id);
+  goToTab("map");
+  if (leafletMap === null) return;   // offline: the fallback list is shown
+  selectPin(id);
+  leafletMap.setView([stay.lat, stay.lng], 12);
+}
+
+/* =====================================================================
+   STAY DETAIL
+   ===================================================================== */
+
+function openStay(id) {
+  state.openStayId = id;
+  state.newStars = 0;
+  const det = document.getElementById("det");
+  det.scrollTop = 0;
+  // Short skeleton first, like the real app waiting for data.
+  det.innerHTML = '<div class="hero sk" style="border-radius:0"></div><div class="sheet">' +
+    '<div class="sk" style="height:24px;width:70%"></div><div class="sk" style="height:18px;width:40%;margin-top:12px"></div>' +
+    '<div class="sk" style="height:70px;margin-top:20px"></div><div class="sk" style="height:60px;margin-top:16px"></div></div>';
+  det.classList.add("on");
+  setTimeout(function () {
+    if (state.openStayId === id) renderStay();
+  }, 600);
+}
+
+function closeStay() {
+  state.openStayId = null;
+  document.getElementById("det").classList.remove("on");
+}
+
+function renderStay() {
+  const stay = findStay(state.openStayId);
+  const isSaved = state.saved.includes(stay.id);
+  let amenities = "";
+  stay.amenities.forEach(function (a) {
+    amenities += '<div class="glass">' + icon(a) + AMENITY_LABEL[a] + '</div>';
+  });
+  document.getElementById("det").innerHTML =
+    '<div class="hero">' + art(stay) +
+    '<div class="row sp"><div class="ib" onclick="closeStay()">' + icon("back") + '</div>' +
+    '<div class="ib" onclick="toggleSave(' + stay.id + ')">' + icon("bm", isSaved ? "fill:currentColor" : "") + '</div></div></div>' +
+    '<div class="sheet"><h1 style="font-size:23px">' + stay.name + '</h1>' +
+    '<div class="m" style="margin-top:4px">' + stay.city + ', ' + stay.country + '</div>' +
+    '<div class="row sp" style="margin:10px 0 14px"><div class="pr" style="font-size:22px">' + formatPrice(stay.price) +
+    '<span class="m" style="font-weight:400"> /night</span></div>' +
+    '<span class="str">' + icon("star") + '<b>' + stay.rating + '</b></span></div>' +
+    '<h3>About</h3><p class="m" style="line-height:1.6;font-size:13px;margin:6px 0 16px">' + stay.desc + '</p>' +
+    '<h3>Amenities</h3><div class="am">' + amenities + '</div>' +
+    '<button class="btn ghost" onclick="openOnMap(' + stay.id + ')">Open on map</button>' +
+    '<h3 style="margin-top:22px">Reviews (' + REVIEWS[stay.id].length + ')</h3>' + reviewsHtml(stay.id) +
+    '<h3 style="margin-top:22px">Rate this stay</h3>' + reviewFormHtml() + '</div>';
+}
+
+function reviewsHtml(id) {
+  return REVIEWS[id].map(function (r) {
+    return '<div class="rv glass"><div class="row sp"><b>' + escapeHtml(r.name) + '</b>' +
+      '<span style="color:#f5a623">' + starsText(r.stars) + '</span></div>' +
+      '<div style="margin-top:4px">' + escapeHtml(r.text) + '</div></div>';
+  }).join("");
+}
+
+// Three cases: guest, suspended customer, normal customer.
+function reviewFormHtml() {
+  if (!state.user) {
+    return '<p class="m" style="margin:6px 0 10px">Log in to rate and review.</p>' +
+      '<button class="btn" onclick="showLogin()">Log in</button>';
+  }
+  if (isSuspended()) {
+    return '<div class="notice"><b>Your account is suspended.</b> You can still browse, but you can\'t rate or review.</div>';
+  }
+  let stars = "";
+  for (let n = 1; n <= 5; n++) {
+    stars += '<span class="rs ' + (n <= state.newStars ? "on" : "") + '" onclick="setStars(' + n + ')">★</span>';
+  }
+  return '<div class="rate">' + stars + '</div>' +
+    '<textarea id="review-text" class="inp" placeholder="Tell other guests about your stay"></textarea>' +
+    '<button class="btn" style="margin-top:12px" onclick="postReview()">Post review</button>';
+}
+
+function setStars(n) {
+  state.newStars = n;
+  // Only redraw the stars so the typed comment is not lost.
+  document.querySelectorAll(".rs").forEach(function (el, i) {
+    el.classList.toggle("on", i < n);
+  });
+}
+
+function postReview() {
+  if (isSuspended()) {          // double check, like the server would
+    showToast("Your account is suspended, so you can't review.");
+    return;
+  }
+  const text = document.getElementById("review-text").value.trim();
+  if (state.newStars === 0) { showToast("Pick 1 to 5 stars first"); return; }
+  if (text.length < 3) { showToast("Please write a short comment"); return; }
+  REVIEWS[state.openStayId].unshift({ name: state.user.name, stars: state.newStars, text: text });
+  state.newStars = 0;
+  renderStay();
+  showToast("Thanks! Your review was posted.");
+}
+
+/* =====================================================================
+   SAVING STAYS (the suspension bug fix lives here)
+   ===================================================================== */
+
+function toggleSave(id) {
+  if (!state.user) {
+    showToast("Log in to save stays");
+    showLogin();
+    return;
+  }
+  const isSaved = state.saved.includes(id);
+  if (!isSaved && isSuspended()) {
+    showToast("Your account is suspended, so you can't save guesthouses.");
+    return;
+  }
+  if (isSaved) {
+    state.saved = state.saved.filter(function (x) { return x !== id; });
+    showToast("Removed from Saved");
+  } else {
+    state.saved.push(id);
+    showToast("Saved!");
+  }
+  renderStay();
+  renderSaved();
+}
+
+function renderSaved() {
+  let body;
+  if (!state.user) {
+    body = '<div style="text-align:center;margin-top:28px"><h3 style="margin-bottom:6px">Your favourites start here.</h3>' +
+      '<p class="m" style="margin-bottom:18px">Log in to save your favourite guesthouses.</p>' +
+      '<button class="btn" onclick="showLogin()">Log in</button></div>';
+  } else if (state.saved.length === 0) {
+    body = '<div class="glass li m">Tap the bookmark on a stay to save it.</div>';
+  } else {
+    body = STAYS.filter(function (s) { return state.saved.includes(s.id); }).map(stayRow).join("");
+  }
+  document.getElementById("page-saved").innerHTML = '<h1 style="margin:8px 0 14px">Saved</h1>' + body;
+}
+
+/* =====================================================================
+   PROFILE PAGE
+   ===================================================================== */
+
+function showProfileWithSkeleton() {
+  document.getElementById("page-profile").innerHTML =
+    '<h1 style="margin:8px 0 16px">Profile</h1><div class="pf glass">' +
+    '<div class="sk" style="width:96px;height:96px;border-radius:50%;margin:0 auto 12px"></div>' +
+    '<div class="sk" style="height:16px;width:50%;margin:0 auto"></div>' +
+    '<div class="sk" style="height:12px;width:35%;margin:8px auto 0"></div></div>' +
+    '<div class="sk" style="height:150px;border-radius:18px"></div>';
+  setTimeout(function () {
+    if (state.tab === "profile") renderProfile();
+  }, 600);
+}
+
+function renderProfile() {
+  const u = state.user;
+  let top;
+  if (u) {
+    top = '<div class="pf glass"><div class="big-av"><div class="av">' + avatarHtml() + '</div>' +
+      '<div class="cam" onclick="chooseAvatar()" title="Change picture">' + icon("cam") + '</div></div>' +
+      '<h3>' + escapeHtml(u.name) + '</h3><div class="m">@' + escapeHtml(u.username) + '</div>' +
+      '<div class="m">' + escapeHtml(u.email) + '</div>' +
+      (u.suspended ? '<span class="badge-red">Account suspended</span>' : '') + '</div>';
+  } else {
+    top = '<div class="pf glass"><div class="big-av"><div class="av">?</div></div>' +
+      '<h3>Guest</h3><p class="m" style="margin:4px 0 14px">Log in to save stays, write reviews and unlock themes.</p>' +
+      '<button class="btn" onclick="showLogin()">Log in</button></div>';
+  }
+
+  const settings = '<div class="sh">Settings</div><div class="grp glass">' +
+    '<div class="st" onclick="openThemePicker()"><div class="si">' + icon("pal") + '</div>Theme' +
+    '<span class="v">' + THEMES[state.theme].name + icon("chev", "width:16px;height:16px") + '</span></div>' +
+    '<div class="st" onclick="openCurrencyPicker()"><div class="si">' + icon("coin") + '</div>Currency' +
+    '<span class="v">' + state.currency + icon("chev", "width:16px;height:16px") + '</span></div>' +
+    (u ? '<div class="st" style="color:var(--red);font-weight:600" onclick="logOut()"><div class="si" style="background:var(--red);color:#fff">' + icon("out") + '</div>Log out</div>' : '') +
+    '</div>';
+
+  // Demo controls: lets the presenter act like the admin.
+  const demo = '<div class="sh">Demo controls</div><div class="grp glass">' +
+    (u
+      ? '<div class="st" onclick="toggleSuspended()">Suspend this account (as the admin would)' +
+        '<span class="v"><span class="tg ' + (u.suspended ? "on" : "") + '"></span></span></div>'
+      : '<div class="st m" style="cursor:default">Log in to try the suspend switch.</div>') +
+    '</div>';
+
+  document.getElementById("page-profile").innerHTML = '<h1 style="margin:8px 0 16px">Profile</h1>' + top + settings + demo;
+}
+
+function toggleSuspended() {
+  state.user.suspended = !state.user.suspended;
+  renderAll();
+  showToast(state.user.suspended ? "Account suspended by admin" : "Account active again");
+}
+
+// Profile picture: opens the file picker, then shows the image (kept in memory only).
+function chooseAvatar() {
+  document.getElementById("avatar-input").click();
+}
+
+function onAvatarChosen(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (!file.type.startsWith("image/")) { showToast("Please choose a picture"); return; }
+  const reader = new FileReader();
+  reader.onload = function () {
+    state.user.avatar = reader.result;
+    renderAll();
+    showToast("Profile picture updated");
+  };
+  reader.readAsDataURL(file);
+  input.value = "";   // lets the same file be picked again
+}
+
+/* =====================================================================
+   BOTTOM SHEET: theme picker and currency picker
+   ===================================================================== */
+
+function openSheet(html) {
+  document.getElementById("bs").innerHTML = html;
+  document.getElementById("ov").classList.add("on");
+}
+
+function closeSheet() {
+  document.getElementById("ov").classList.remove("on");
+}
+
+// Concentric circles that preview a theme's four colours.
+function themePreview(theme) {
+  const rings = [[48, 50], [37, 61], [26, 72], [15, 83]];
+  let circles = "";
+  rings.forEach(function (ring, i) {
+    circles += '<circle cx="50" cy="' + ring[1] + '" r="' + ring[0] + '" fill="' + theme.c[i] +
+      '" stroke="' + (i ? "rgba(255,255,255,.85)" : "rgba(128,128,128,.35)") + '" stroke-width="1.2"/>';
+  });
+  return '<svg class="cc" viewBox="0 0 100 100">' + circles + '</svg>';
+}
+
+function openThemePicker() {
+  let cards = "";
+  Object.keys(THEMES).forEach(function (key) {
+    const t = THEMES[key];
+    const locked = !t.free && !state.user;
+    cards += '<div class="tc glass ' + (key === state.theme ? "on" : "") + '" onclick="pickTheme(\'' + key + '\')">' +
+      themePreview(t) + '<b style="font-size:13px">' + t.name + '</b>' +
+      '<div class="m">' + (t.free ? "Free" : locked ? "Log in to unlock" : "Unlocked") + '</div>' +
+      (locked ? '<span class="lk">' + icon("lock") + '</span>' : '') + '</div>';
+  });
+  openSheet('<div class="row sp"><h3>Theme</h3><button class="ib" onclick="closeSheet()">' + icon("chk") + '</button></div>' +
+    '<div class="themes">' + cards + '</div>');
+}
+
+function openCurrencyPicker() {
+  let rows = "";
+  Object.keys(CURRENCIES).forEach(function (code) {
+    const c = CURRENCIES[code];
+    rows += '<div class="st" onclick="pickCurrency(\'' + code + '\')"><div class="si">' + c.symbol + '</div>' +
+      '<div><b>' + code + '</b><div class="m">' + c.name + '</div></div>' +
+      '<span class="v">' + (code === state.currency ? icon("chk", "color:var(--acc);stroke-width:3") : "") + '</span></div>';
+  });
+  openSheet('<h3 style="margin-bottom:12px">Currency</h3><div class="grp glass">' + rows + '</div>');
+}
+
+/* =====================================================================
+   LOGIN, SIGN UP, FORGOT PASSWORD, LOG OUT
+   ===================================================================== */
+
+function showLogin() {
+  state.loginMode = "signin";
+  renderLogin();
+  document.getElementById("login").classList.remove("off");
+}
+
+function hideLogin() {
+  document.getElementById("login").classList.add("off");
+}
+
+function renderLogin() {
+  const box = document.getElementById("login");
+  if (state.loginMode === "signup") {
+    box.innerHTML = '<div class="card glass"><h1>Create account</h1>' +
+      '<p class="m" style="margin-top:4px">Join Mi Casa Es Su Casa</p>' +
+      '<input id="su-name" class="inp" placeholder="Full name">' +
+      '<input id="su-username" class="inp" placeholder="Username (3-20 letters, numbers, _)">' +
+      '<input id="su-email" class="inp" type="email" placeholder="Email">' +
+      '<input id="su-password" class="inp" type="password" placeholder="Password (6+ characters)">' +
+      '<div class="er" id="login-msg"></div>' +
+      '<button class="btn" onclick="signUp()">Sign up</button>' +
+      '<div class="link" onclick="setLoginMode(\'signin\')">I already have an account</div>' +
+      '<p class="m link" onclick="hideLogin()">Continue as guest</p></div>';
+    return;
+  }
+  box.innerHTML = '<div class="card glass"><h1>Welcome back</h1>' +
+    '<p class="m" style="margin-top:4px">Sign in to Mi Casa Es Su Casa</p>' +
+    '<input id="li-email" class="inp" type="email" placeholder="Email">' +
+    '<input id="li-password" class="inp" type="password" placeholder="Password">' +
+    '<div class="m" style="text-align:right;margin-top:8px;cursor:pointer" onclick="forgotPassword()">Forgot password?</div>' +
+    '<div class="er" id="login-msg"></div>' +
+    '<button class="btn" onclick="logIn()">Sign in</button>' +
+    '<div class="link" onclick="setLoginMode(\'signup\')">New here? Sign up</div>' +
+    '<p class="m link" onclick="hideLogin()">Continue as guest</p>' +
+    '<div class="demo-acc glass"><b>Demo accounts</b> (tap to fill)' +
+    '<div onclick="fillDemo(\'demo@micasa.app\')">demo@micasa.app / password123 (normal)</div>' +
+    '<div onclick="fillDemo(\'suspended@micasa.app\')">suspended@micasa.app / password123 (SUSPENDED)</div></div></div>';
+}
+
+function setLoginMode(mode) {
+  state.loginMode = mode;
+  renderLogin();
+}
+
+function fillDemo(email) {
+  document.getElementById("li-email").value = email;
+  document.getElementById("li-password").value = "password123";
+}
+
+function setLoginMessage(text, isGood) {
+  const el = document.getElementById("login-msg");
+  el.className = isGood ? "ok" : "er";
+  el.textContent = text;
+}
+
+function logIn() {
+  const email = document.getElementById("li-email").value.trim().toLowerCase();
+  const password = document.getElementById("li-password").value;
+  const account = ACCOUNTS.find(function (a) { return a.email === email && a.password === password; });
+  if (!account) {
+    setLoginMessage("Wrong email or password", false);
+    return;
+  }
+  finishLogin(account, "Welcome, " + account.name + "!");
+}
+
+function forgotPassword() {
+  const email = document.getElementById("li-email").value.trim();
+  if (!email) {
+    setLoginMessage("Type your email first, then tap Forgot password.", false);
+    return;
+  }
+  setLoginMessage("If an account exists for " + email + ", a reset link was sent. (Demo: nothing is really sent.)", true);
+}
+
+function signUp() {
+  const name = document.getElementById("su-name").value.trim();
+  const username = document.getElementById("su-username").value.trim();
+  const email = document.getElementById("su-email").value.trim().toLowerCase();
+  const password = document.getElementById("su-password").value;
+
+  if (name === "") return setLoginMessage("Please enter your name", false);
+  if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) return setLoginMessage("Username: 3-20 letters, numbers or _", false);
+  if (!/^\S+@\S+\.\S+$/.test(email)) return setLoginMessage("Please enter a valid email", false);
+  if (password.length < 6) return setLoginMessage("Password needs at least 6 characters", false);
+  if (ACCOUNTS.some(function (a) { return a.email === email; })) return setLoginMessage("That email is already used", false);
+  if (ACCOUNTS.some(function (a) { return a.username.toLowerCase() === username.toLowerCase(); })) return setLoginMessage("That username is taken", false);
+
+  const account = { email: email, password: password, name: name, username: username, suspended: false, avatar: null };
+  ACCOUNTS.push(account);
+  finishLogin(account, "Account created. Welcome, " + name + "!");
+}
+
+function finishLogin(account, message) {
+  state.user = account;
+  state.saved = [];
+  hideLogin();
+  renderAll();
+  if (state.tab === "profile") showProfileWithSkeleton();
+  showToast(message);
+}
+
+function logOut() {
+  state.user = null;
+  state.saved = [];
+  if (!THEMES[state.theme].free) {   // locked themes go back to the default
+    state.theme = "cream";
+    saveSettings();
+    applyTheme();
+  }
+  renderAll();
+  showToast("You are logged out");
+}
+
+/* =====================================================================
+   START THE APP
+   ===================================================================== */
+
+function start() {
+  loadSettings();
+  applyTheme();
+  renderAll();
+  showLogin();
+  // Fake "loading" for 1 second so the skeleton cards can be seen.
+  setTimeout(function () {
+    state.exploreLoading = false;
+    renderExploreList();
+  }, 1000);
+}
+
+start();
+</script>
+</body>
+</html>

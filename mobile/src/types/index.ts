@@ -29,6 +29,15 @@ export type Review = {
   isHidden?: boolean; // hidden by an admin, not shown and not counted in the average
 };
 
-export type Customer = { id: string; name: string; email: string };
+export type Customer = {
+  id: string;
+  name: string;
+  email: string;
+  username?: string; // missing on accounts created before usernames existed
+  photoUrl?: string; // small base64 data URI stored in customers/{uid}
+};
 
 export type SortKey = 'price_asc' | 'price_desc' | 'rating_desc' | 'rating_asc';
+
+// Choices in the Explore filter sheet. maxPrice is in BWP; null means any price.
+export type Filters = { sort: SortKey; maxPrice: number | null; minRating: number };

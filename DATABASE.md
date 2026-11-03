@@ -8,7 +8,7 @@ The web admin portal and the mobile app share one database. This document descri
 |---|---|---|
 | Database | Cloud Firestore (NoSQL, document based) | The brief asks for a NoSQL database. Firestore updates quickly, works from both React and React Native, and needs no server of our own for the mobile app. |
 | Login | Firebase Authentication (email and password) | Same project as the database, so a logged-in user's `uid` can be used directly in the data and the security rules. |
-| Images | Firebase Storage (used by the web portal) | The database only holds the image URLs. The mobile app never uploads. |
+| Images | Cloudinary (used by the web portal) | Firebase Storage needs a paid plan, so photos are hosted on Cloudinary. The database only holds the image URLs. The mobile app never uploads guesthouse photos. |
 
 Guesthouse details are stored as one document, with amenities and gallery images as arrays inside it. A guesthouse is almost always read as a whole, so this avoids the joins a relational design would need.
 
