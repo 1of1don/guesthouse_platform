@@ -14,12 +14,12 @@ BIUST group project, an Airbnb-style guesthouse **discovery** platform (no booki
 | Name | Student number |
 |---|---|
 | Anthony Kebadilwe | 24019851|
-| Don (1of1don) | (fill in) |
-| Victor Matenge | (fill in) |
-| Simo (Simo061005) | (fill in) |
-| Beatrice Sefofu | (fill in) |
-| Matlhogonolo Ketshabile | (fill in) |
-| Gorata Dube | (fill in) |
+| Don (1of1don) | 24019363 |
+| Victor Matenge | 24019722 |
+| Susana (Simo061005) | 24019739 |
+| Beatrice Sefofu | 18001321 |
+| Matlhogonolo Ketshabile | 24019708 |
+| Gorata Dube | 24020011 |
 
 ## Quick start
 
