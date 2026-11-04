@@ -1,3 +1,4 @@
+// CURRENCIES: the list of currencies, backup exchange rates, and how prices are written.
 export const CURRENCIES = ['BWP', 'USD', 'EUR', 'GBP', 'ZAR', 'NAD', 'KES', 'ZMW'] as const;
 
 export const SYMBOLS: Record<string, string> = {

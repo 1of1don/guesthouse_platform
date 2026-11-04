@@ -125,6 +125,15 @@ export async function submitReview(guesthouseId: string, customer: Customer, sco
   });
 }
 
+// Tells the app whenever an admin suspends or un-suspends this customer.
+export function watchSuspension(customerId: string, onChange: (suspended: boolean) => void) {
+  return onSnapshot(
+    doc(db, 'customers', customerId),
+    (snap) => onChange(snap.data()?.isSuspended === true),
+    () => onChange(false), // offline or no access: the server rules still protect the data
+  );
+}
+
 export async function getFavouriteIds(customerId: string): Promise<string[]> {
   const snap = await getDocs(collection(db, 'customers', customerId, 'favourites'));
   return snap.docs.map((d) => d.id);

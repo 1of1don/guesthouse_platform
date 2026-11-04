@@ -1,14 +1,19 @@
+// SAVED TAB: the customer's favourite guesthouses. Guests are asked to log in.
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GuesthouseCard } from '../../components/GuesthouseCard';
+import { GuesthouseListSkeleton } from '../../components/GuesthouseCardSkeleton';
 import { useAuth } from '../../context/AuthContext';
 import { watchGuesthouses } from '../../services/guesthouses';
-import { colors, radius } from '../../theme';
+import { Colors, radius } from '../../theme';
+import { useColors } from '../../context/ThemeContext';
 import { Guesthouse } from '../../types';
 
 export default function Saved() {
+  const colors = useColors();
+  const styles = makeStyles(colors);
   const router = useRouter();
   const { customer, favouriteIds } = useAuth();
   const [all, setAll] = useState<Guesthouse[]>([]);
@@ -35,7 +40,7 @@ export default function Saved() {
           </Pressable>
         </View>
       ) : loading ? (
-        <ActivityIndicator style={{ marginTop: 40 }} color={colors.ink} />
+        <GuesthouseListSkeleton />
       ) : (
         <FlatList
           data={saved}
@@ -53,11 +58,11 @@ export default function Saved() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.paper },
+const makeStyles = (colors: Colors) => StyleSheet.create({
+  screen: { flex: 1 }, // see-through, so the moving background shows
   title: { fontSize: 26, fontWeight: '800', color: colors.ink, paddingHorizontal: 20, paddingTop: 8 },
   center: { alignItems: 'center', padding: 32 },
   message: { textAlign: 'center', color: colors.muted, fontSize: 15, lineHeight: 22 },
-  button: { marginTop: 16, backgroundColor: colors.ink, borderRadius: radius.sm, paddingHorizontal: 24, paddingVertical: 12 },
-  buttonText: { color: colors.paper, fontWeight: '700' },
+  button: { marginTop: 16, backgroundColor: colors.primary, borderRadius: radius.sm, paddingHorizontal: 24, paddingVertical: 12 },
+  buttonText: { color: colors.onPrimary, fontWeight: '700' },
 });

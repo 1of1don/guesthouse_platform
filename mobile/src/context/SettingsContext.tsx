@@ -1,3 +1,5 @@
+// CURRENCY SETTINGS (shared by every screen): chosen currency, exchange rates,
+// and formatPrice(), which turns a Pula price into the chosen currency, e.g. "$47".
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Localization from 'expo-localization';
 import * as Location from 'expo-location';
